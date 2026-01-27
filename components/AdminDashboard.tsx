@@ -7,11 +7,11 @@ import { supabase } from '../lib/supabase';
 
 interface AdminDashboardProps {
   settings: AppSettings;
-  setSettings: (s: AppSettings) => void;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   categories: Category[];
-  setCategories: (c: Category[]) => void;
+  setCategories: React.Dispatch<React.SetStateAction<Category[]>>;
   products: Product[];
-  setProducts: (p: Product[]) => void;
+  setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   onClose: () => void;
   isAdminLoggedIn: boolean;
   setIsAdminLoggedIn: (val: boolean) => void;
@@ -72,39 +72,41 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
   };
 
   const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return;
+    const name = newCategoryName.trim();
+    if (!name) return;
     setIsSaving(true);
     try {
-      const { data, error } = await supabase.from('categories').insert([{ name: newCategoryName.trim() }]).select();
+      const { data, error } = await supabase.from('categories').insert([{ name }]).select();
       if (error) throw error;
-      if (data) {
-        setCategories([...categories, data[0]]);
+      if (data && data.length > 0) {
+        setCategories(prev => [...prev, data[0]]);
         setNewCategoryName('');
-        alert('Categoria criada com sucesso!');
+        alert('Categoria "' + name + '" criada com sucesso!');
       }
     } catch (err) { 
-      console.error(err);
-      alert('Erro ao criar categoria no banco de dados.'); 
+      console.error('Erro ao salvar categoria:', err);
+      alert('Erro ao salvar categoria. Verifique sua conexão.'); 
     } finally { setIsSaving(false); }
   };
 
   const deleteCategory = async (id: string) => {
-    if (!confirm('Excluir categoria?')) return;
+    if (!confirm('Excluir categoria? Todos os produtos desta categoria continuarão existindo, mas sem categoria definida.')) return;
     try {
-      await supabase.from('categories').delete().eq('id', id);
-      setCategories(categories.filter(c => c.id !== id));
-    } catch (err) { alert('Erro ao excluir.'); }
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      if (error) throw error;
+      setCategories(prev => prev.filter(c => c.id !== id));
+    } catch (err) { alert('Erro ao excluir categoria.'); }
   };
 
-  const saveSettings = async (newSettings: AppSettings) => {
+  const saveSettings = async (currentSettings: AppSettings) => {
     setIsSaving(true);
     try {
-      setSettings(newSettings);
-      const { error } = await supabase.from('settings').upsert({ id: 1, data: newSettings });
+      const { error } = await supabase.from('settings').upsert({ id: 1, data: currentSettings });
       if (error) throw error;
-      alert("Alterações salvas com sucesso!");
+      setSettings(currentSettings);
+      alert("Configurações salvas com sucesso!");
     } catch (err) { 
-      console.error(err);
+      console.error('Erro ao salvar settings:', err);
       alert("Erro ao salvar no banco de dados."); 
     } finally { setIsSaving(false); }
   };
@@ -118,22 +120,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
         const { id, ...prodData } = editingProduct;
         const { data, error } = await supabase.from('products').insert([prodData]).select();
         if (error) throw error;
-        setProducts([...products, data[0]]);
+        setProducts(prev => [...prev, data[0]]);
       } else {
         const { error } = await supabase.from('products').update(editingProduct).eq('id', editingProduct.id);
         if (error) throw error;
-        setProducts(products.map(p => p.id === editingProduct.id ? editingProduct : p));
+        setProducts(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
       }
       setEditingProduct(null);
-      alert('Produto salvo!');
+      alert('Produto salvo com sucesso!');
     } catch (err) { alert("Erro ao salvar produto."); } finally { setIsSaving(false); }
   };
 
   const deleteProduct = async (id: string) => {
-    if (!confirm('Excluir?')) return;
+    if (!confirm('Excluir este produto permanentemente?')) return;
     try {
-      await supabase.from('products').delete().eq('id', id);
-      setProducts(products.filter(p => p.id !== id));
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
+      setProducts(prev => prev.filter(p => p.id !== id));
     } catch (err) { alert("Erro ao excluir."); }
   };
 
@@ -144,8 +147,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
       reader.onloadend = () => {
         const base64String = reader.result as string;
         if (type === 'product' && editingProduct) setEditingProduct({ ...editingProduct, image: base64String });
-        else if (type === 'logo') setSettings({ ...settings, logo: base64String });
-        else if (type === 'banner') setSettings({ ...settings, banner: base64String });
+        else if (type === 'logo') setSettings(prev => ({ ...prev, logo: base64String }));
+        else if (type === 'banner') setSettings(prev => ({ ...prev, banner: base64String }));
       };
       reader.readAsDataURL(file);
     }
@@ -219,17 +222,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
               <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                  <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2"><Layers className="text-red-600"/> Gerenciar Categorias</h3>
                  <div className="flex gap-2">
-                    <input type="text" placeholder="Nome da Categoria (Ex: Combos)" className="flex-1 p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[24px] outline-none font-bold" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
-                    <button onClick={handleAddCategory} disabled={isSaving} className="bg-red-600 text-white px-8 rounded-[24px] font-black text-xs uppercase disabled:opacity-50">
+                    <input type="text" placeholder="Ex: Bebidas, Combos, Sobremesas" className="flex-1 p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[24px] outline-none font-bold" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
+                    <button onClick={handleAddCategory} disabled={isSaving || !newCategoryName.trim()} className="bg-red-600 text-white px-8 rounded-[24px] font-black text-xs uppercase disabled:opacity-50">
                       {isSaving ? 'SALVANDO...' : 'ADICIONAR'}
                     </button>
                  </div>
                  <div className="space-y-2 mt-8">
                     {categories.length === 0 ? (
-                      <p className="text-center text-gray-300 font-bold py-10">Nenhuma categoria criada.</p>
+                      <p className="text-center text-gray-300 font-bold py-10">Crie sua primeira categoria acima.</p>
                     ) : (
                       categories.map(c => (
-                        <div key={c.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100">
+                        <div key={c.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-red-200 transition-all">
                             <span className="font-black text-gray-700 text-sm uppercase tracking-widest">{c.name}</span>
                             <button onClick={() => deleteCategory(c.id)} className="p-3 text-red-300 hover:text-red-600 transition-colors"><Trash2 size={18}/></button>
                         </div>
@@ -243,7 +246,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
         {activeTab === 'products' && (
            <div className="space-y-6 animate-slide-in">
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-black text-gray-900">Gerenciar Itens</h2>
+                <h2 className="text-2xl font-black text-gray-900">Itens do Cardápio</h2>
                 <button onClick={() => setEditingProduct({ id: `temp-${Date.now()}`, name: '', description: '', price: 0, image: '', categoryId: categories[0]?.id || '', extras: [], active: true })} className="bg-red-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg shadow-red-200"><Plus size={16}/> NOVO PRODUTO</button>
               </div>
               <div className="grid grid-cols-1 gap-4">
@@ -256,7 +259,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                       <div className="flex-1">
                          <h4 className="font-black text-gray-900 text-lg leading-tight">{p.name}</h4>
                          <p className="text-red-600 font-black text-sm">R$ {p.price.toFixed(2)}</p>
-                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{categories.find(c => c.id === p.categoryId)?.name}</span>
+                         <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{categories.find(c => c.id === p.categoryId)?.name || 'Sem Categoria'}</span>
                       </div>
                       <div className="flex gap-2">
                          <button onClick={() => setEditingProduct(p)} className="p-3 bg-gray-50 text-gray-600 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-colors"><Edit3 size={18}/></button>
@@ -270,36 +273,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
 
         {activeTab === 'hours' && (
           <div className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-sm space-y-6 animate-slide-in">
-             <h3 className="font-black text-gray-900 flex items-center gap-2 text-xl"><Clock className="text-red-600"/> Horários de Funcionamento</h3>
-             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[2px] mb-4">O cardápio avisará se a loja está fechada automaticamente.</p>
+             <h3 className="font-black text-gray-900 flex items-center gap-2 text-xl"><Clock className="text-red-600"/> Horários da Silvia</h3>
              <div className="space-y-3">
                 {settings.businessHours?.map((h, i) => (
-                   <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                   <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-200 transition-all">
                       <span className="font-black text-gray-700 w-24 text-sm">{h.day}</span>
                       <div className="flex items-center gap-2">
-                         <input type="time" title="Abre" className="bg-white border-2 border-gray-200 rounded-lg p-1 text-xs font-bold outline-none focus:border-red-600" value={h.open} onChange={e => {
+                         <input type="time" title="Abre" className="bg-white border-2 border-gray-200 rounded-lg p-1.5 text-xs font-black outline-none focus:border-red-600" value={h.open} onChange={e => {
                             const nh = [...settings.businessHours!];
                             nh[i].open = e.target.value;
-                            setSettings({...settings, businessHours: nh});
+                            setSettings(prev => ({...prev, businessHours: nh}));
                          }} />
                          <span className="font-black text-gray-300">-</span>
-                         <input type="time" title="Fecha" className="bg-white border-2 border-gray-200 rounded-lg p-1 text-xs font-bold outline-none focus:border-red-600" value={h.close} onChange={e => {
+                         <input type="time" title="Fecha" className="bg-white border-2 border-gray-200 rounded-lg p-1.5 text-xs font-black outline-none focus:border-red-600" value={h.close} onChange={e => {
                             const nh = [...settings.businessHours!];
                             nh[i].close = e.target.value;
-                            setSettings({...settings, businessHours: nh});
+                            setSettings(prev => ({...prev, businessHours: nh}));
                          }} />
                       </div>
                       <button onClick={() => {
                         const newHours = [...settings.businessHours!];
                         newHours[i].isOpen = !newHours[i].isOpen;
-                        setSettings({...settings, businessHours: newHours});
-                      }} className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${h.isOpen ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-red-100 text-red-600 border border-red-200'}`}>
+                        setSettings(prev => ({...prev, businessHours: newHours}));
+                      }} className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all shadow-sm ${h.isOpen ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-red-100 text-red-600 border border-red-200'}`}>
                         {h.isOpen ? 'ABERTO' : 'FECHADO'}
                       </button>
                    </div>
                 ))}
              </div>
-             <button onClick={() => saveSettings(settings)} disabled={isSaving} className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest mt-4 hover:bg-black transition-all">
+             <button onClick={() => saveSettings(settings)} disabled={isSaving} className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest mt-4 hover:bg-black transition-all shadow-xl disabled:opacity-50">
                {isSaving ? 'SALVANDO...' : 'SALVAR HORÁRIOS'}
              </button>
           </div>
@@ -312,21 +314,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="flex flex-col items-center gap-4">
                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Logo</p>
-                       <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-50 relative group bg-gray-100">
+                       <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-50 relative group bg-gray-100 shadow-inner">
                           <img src={settings.logo} className="w-full h-full object-cover" alt="Preview Logo" />
                           <button onClick={() => logoInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"><Camera size={32}/></button>
                        </div>
                        <input type="file" hidden ref={logoInputRef} accept="image/*" onChange={(e) => handleFileUpload(e, 'logo')} />
-                       <button onClick={() => logoInputRef.current?.click()} className="text-[10px] font-black text-red-600 uppercase flex items-center gap-2 border border-red-100 px-4 py-2 rounded-full"><Upload size={12}/> Trocar Logo</button>
                     </div>
                     <div className="flex flex-col items-center gap-4">
                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Banner</p>
-                       <div className="w-full h-32 rounded-[28px] overflow-hidden border-4 border-gray-50 relative group bg-gray-100">
+                       <div className="w-full h-32 rounded-[28px] overflow-hidden border-4 border-gray-50 relative group bg-gray-100 shadow-inner">
                           <img src={settings.banner} className="w-full h-full object-cover" alt="Preview Banner" />
                           <button onClick={() => bannerInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"><Camera size={32}/></button>
                        </div>
                        <input type="file" hidden ref={bannerInputRef} accept="image/*" onChange={(e) => handleFileUpload(e, 'banner')} />
-                       <button onClick={() => bannerInputRef.current?.click()} className="text-[10px] font-black text-red-600 uppercase flex items-center gap-2 border border-red-100 px-4 py-2 rounded-full"><Upload size={12}/> Trocar Banner</button>
                     </div>
                  </div>
 
@@ -335,12 +335,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Taxa de Entrega (R$)</label>
                        <div className="relative">
                           <DollarSign className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
-                          <input type="number" step="0.50" className="w-full pl-12 pr-6 py-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[28px] outline-none font-bold" value={settings.deliveryFee} onChange={e => setSettings({...settings, deliveryFee: Number(e.target.value)})} />
+                          <input type="number" step="0.50" className="w-full pl-12 pr-6 py-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[28px] outline-none font-bold" value={settings.deliveryFee} onChange={e => setSettings(prev => ({...prev, deliveryFee: Number(e.target.value)}))} />
                        </div>
                     </div>
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">WhatsApp (Apenas Números)</label>
-                       <input type="text" className="w-full p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[28px] outline-none font-bold" value={settings.whatsapp} onChange={e => setSettings({...settings, whatsapp: e.target.value})} />
+                       <input type="text" className="w-full p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[28px] outline-none font-bold" value={settings.whatsapp} onChange={e => setSettings(prev => ({...prev, whatsapp: e.target.value}))} />
                     </div>
                  </div>
               </div>
