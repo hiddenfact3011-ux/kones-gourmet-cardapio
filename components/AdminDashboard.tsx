@@ -174,57 +174,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <h3 className="text-4xl font-black mb-6 flex items-center gap-3 text-teal-400">Publicar Site</h3>
                 
                 <div className="space-y-12">
-                   {/* DICA DO ÍCONE */}
+                   {/* ALERTA DE NOME DUPLICADO */}
+                   <div className="p-8 bg-red-600/20 border-2 border-red-500/40 rounded-[40px] space-y-4">
+                      <h4 className="text-2xl font-black flex items-center gap-3 text-red-400"><AlertTriangle /> "Name already taken"?</h4>
+                      <p className="text-red-100 font-bold leading-relaxed">
+                         Se você viu essa mensagem, significa que o nome já foi usado por outra pessoa.
+                      </p>
+                      <div className="bg-black/40 p-6 rounded-3xl border border-red-500/20">
+                         <p className="text-sm text-white font-black">Mude o "Project Name" para algo único:</p>
+                         <ul className="mt-3 space-y-2 text-xs text-red-200">
+                            <li>❌ <span className="line-through">kones-gourmet-cardápio</span> (Não use acentos!)</li>
+                            <li>✅ <span className="text-green-400 font-black">kones-gourmet-silvia</span></li>
+                            <li>✅ <span className="text-green-400 font-black">kones-gourmet-oficial</span></li>
+                         </ul>
+                      </div>
+                   </div>
+
                    <div className="p-8 bg-blue-600/20 border-2 border-blue-500/40 rounded-[40px] space-y-6 relative">
                       <div className="absolute -top-6 -left-6 bg-blue-500 p-4 rounded-full shadow-lg animate-bounce">
                          <MousePointer2 className="text-white" size={32} />
                       </div>
-                      <h4 className="text-2xl font-black flex items-center gap-3"><Github /> O Jeito Mais Fácil!</h4>
+                      <h4 className="text-2xl font-black flex items-center gap-3"><Github /> Primeiro: Salve no Gatinho</h4>
                       <p className="text-blue-100 font-bold leading-relaxed">
-                         Silvia, olhe para a **barra lateral (esquerda)** ou **barra superior** do programa onde você está editando o código agora.
+                         Silvia, lembre de clicar no ícone do **Gato (GitHub)** na sua barra lateral antes de ir para a Netlify.
                       </p>
-                      <div className="flex flex-col md:flex-row gap-6 items-center bg-black/40 p-6 rounded-3xl border border-white/10">
-                         <div className="flex flex-col items-center gap-2">
-                            <div className="bg-white/10 p-4 rounded-2xl border border-white/20"><Github size={32} /></div>
-                            <span className="text-[10px] font-black uppercase text-zinc-400">Procure esse ícone</span>
-                         </div>
-                         <ArrowRight className="text-zinc-600 hidden md:block" />
-                         <div className="space-y-2 text-center md:text-left">
-                            <p className="text-sm font-black text-white">Basta clicar nele e depois no botão <span className="text-blue-400">"Sync"</span> ou <span className="text-blue-400">"Commit"</span>.</p>
-                            <p className="text-xs text-zinc-400">Isso envia tudo para o seu GitHub automaticamente, sem precisar arrastar nada!</p>
-                         </div>
-                      </div>
                    </div>
 
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-4">
                          <div className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center font-black text-xl">1</div>
-                         <h4 className="font-black text-xl">Login Netlify</h4>
-                         <p className="text-zinc-400 text-sm">Entre no <a href="https://app.netlify.com" target="_blank" className="text-teal-400 underline">Netlify</a> com seu GitHub.</p>
+                         <h4 className="font-black text-xl">Netlify</h4>
+                         <p className="text-zinc-400 text-sm">Vá em **Add new site** -> **Import existing project**.</p>
                       </div>
 
                       <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-4">
                          <div className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center font-black text-xl">2</div>
-                         <h4 className="font-black text-xl">Add Site</h4>
-                         <p className="text-zinc-400 text-sm">Clique em <strong>Import existing project</strong> e escolha seu repositório.</p>
-                      </div>
-                   </div>
-
-                   <div className="bg-black/40 p-8 rounded-[40px] border border-teal-500/30 space-y-4">
-                      <p className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest text-center">Seus links oficiais:</p>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-4 bg-zinc-900 p-6 rounded-[24px] border border-white/5">
-                           <span className="font-mono text-sm text-teal-400 truncate">kones-gourmet-cardapio.netlify.app</span>
-                           <button onClick={() => handleCopyLink('https://kones-gourmet-cardapio.netlify.app')} className={`p-4 rounded-xl transition-all ${copySuccess ? 'bg-green-500 text-white' : 'bg-teal-600/20 text-teal-400 hover:bg-teal-600 hover:text-white'}`}>
-                              {copySuccess ? <ClipboardCheck size={20}/> : <Copy size={20}/>}
-                           </button>
-                        </div>
-                        <div className="flex items-center justify-between gap-4 bg-zinc-900 p-6 rounded-[24px] border border-white/5">
-                           <span className="font-mono text-sm text-zinc-400 truncate">kones-gourmet-cardapio.vercel.app</span>
-                           <button onClick={() => handleCopyLink('https://kones-gourmet-cardapio.vercel.app')} className="p-4 rounded-xl bg-white/5 text-zinc-400 hover:bg-white/10 transition">
-                              <Copy size={20}/>
-                           </button>
-                        </div>
+                         <h4 className="font-black text-xl">Novo Nome</h4>
+                         <p className="text-zinc-400 text-sm">Se der erro de nome, adicione seu nome ou cidade ao final.</p>
                       </div>
                    </div>
                 </div>
@@ -232,32 +218,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         )}
 
+        {/* Mantendo as outras abas... */}
         {activeTab === 'debug' && (
           <div className="space-y-8 animate-slide-in">
              <div className="p-10 bg-amber-50 border-4 border-amber-200 rounded-[48px] shadow-xl">
-                <h3 className="text-3xl font-black mb-6 text-amber-900 flex items-center gap-3"><ShieldAlert size={32} /> Silvia, o link não abriu?</h3>
-                <p className="text-amber-800 font-bold mb-8">Se a tela ficou branca, é porque a sincronização com o GitHub ainda não aconteceu.</p>
-                
+                <h3 className="text-3xl font-black mb-6 text-amber-900 flex items-center gap-3"><ShieldAlert size={32} /> Ajuda Rápida</h3>
                 <div className="space-y-6">
-                   <div className="bg-white p-6 rounded-3xl border border-amber-200 flex gap-4 shadow-sm">
-                      <div className="bg-amber-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-black shrink-0">1</div>
+                   <div className="bg-white p-6 rounded-3xl border border-amber-200 flex gap-4">
+                      <div className="bg-amber-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-black shrink-0">!</div>
                       <div>
-                        <p className="font-black text-amber-900">Clique no ícone do Gato (GitHub)</p>
-                        <p className="text-sm text-amber-700">O botão fica no menu do seu editor (geralmente à esquerda). Ele envia o código novo para os servidores.</p>
+                        <p className="font-black text-amber-900">Link com erro?</p>
+                        <p className="text-sm text-amber-700">Confira se o nome do projeto não tem espaços nem acentos.</p>
                       </div>
                    </div>
-
-                   <div className="bg-white p-6 rounded-3xl border border-amber-200 flex gap-4 shadow-sm">
-                      <div className="bg-amber-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-black shrink-0">2</div>
-                      <div>
-                        <p className="font-black text-amber-900">Aguarde 2 minutos</p>
-                        <p className="text-sm text-amber-700">Sempre que você salva no GitHub, a Netlify leva um tempinho para processar as mudanças. Tenha um pouquinho de paciência!</p>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="mt-10 flex flex-col md:flex-row gap-4">
-                   <button onClick={() => window.open('https://app.netlify.com', '_blank')} className="flex-1 bg-teal-600 text-white py-5 rounded-2xl font-black shadow-lg hover:bg-teal-700 transition">Conferir na Netlify</button>
                 </div>
              </div>
           </div>
