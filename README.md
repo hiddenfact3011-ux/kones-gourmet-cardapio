@@ -2,25 +2,23 @@
 
 Bem-vinda, Silvia! Este é o código do seu cardápio digital profissional.
 
-## 🚀 Como gerar seu link oficial (Site no Ar)
+## 🚀 Publicar Agora (Botões Corrigidos)
 
-Para que seus clientes possam acessar o cardápio pelo seu link próprio, clique em um dos botões abaixo. Recomendamos a **Netlify** por ser muito simples e gratuita.
+Clique abaixo para gerar seu link. Quando o site pedir **"Project Name"**, use `kones-gourmet-cardapio`.
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/seu-usuario/kones-gourmet-cardapio)
-ou
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/seu-usuario/kones-gourmet-cardapio)
 
 ---
 
-### 🛠️ Próximos Passos após clicar no botão:
-1. **Conectar com GitHub**: O site vai pedir permissão para ler este código.
-2. **Confirmar**: Clique em "Deploy" ou "Save".
-3. **Seu Link**: Em 1 minuto você terá um link como `kones-gourmet.netlify.app`.
+## 🛠️ Guia de Publicação (Vercel)
 
-### 📱 Como usar:
-- Pegue o link gerado e coloque na sua **Bio do Instagram**.
-- Mande para seus clientes no **WhatsApp**.
-- O painel administrativo continua funcionando pela senha `2707` no final do link.
+1.  **Login**: Entre na [Vercel](https://vercel.com/new) com seu GitHub.
+2.  **Importar**: Procure por `kones-gourmet-cardapio` e clique em **Import**.
+3.  **Project Name**: Apague o que estiver lá e digite: `kones-gourmet-cardapio` (tudo minúsculo).
+4.  **Deploy**: Clique no botão azul final e pronto!
+
+### 📱 Onde encontro o meu link?
+A Vercel vai te dar um link como `kones-gourmet-cardapio.vercel.app`. Esse é o seu link para colocar na bio do Instagram!
 
 ---
-*Desenvolvido para Silvia Leticia Ferreira - Kones Gourmet*
+*Silvia, lembre-se: a internet não aceita espaços ou letras grandes nos links, por isso usamos o nome todo grudadinho!*

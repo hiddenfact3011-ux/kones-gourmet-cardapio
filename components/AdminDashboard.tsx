@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, PlusCircle, AlertTriangle, Database, Wifi, WifiOff, ExternalLink, Info, Code, Rocket, Eye, Sparkles, HelpCircle, Share2, Globe } from 'lucide-react';
+import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, PlusCircle, AlertTriangle, Database, Wifi, WifiOff, ExternalLink, Info, Code, Rocket, Eye, Sparkles, HelpCircle, Share2, Globe, Github, ArrowRight, AlertCircle } from 'lucide-react';
 import { AppSettings, Category, Product, Extra } from '../types';
 import { ADMIN_PASSWORD } from '../constants';
 import { supabase } from '../lib/supabase';
@@ -42,18 +42,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const currentUrl = window.location.origin + window.location.pathname;
-  const isDevelopment = currentUrl.includes('webcontainer') || currentUrl.includes('stackblitz') || currentUrl.includes('localhost') || currentUrl.includes('bolt.new');
-
+  
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === ADMIN_PASSWORD) setIsAdminLoggedIn(true);
     else alert('Senha incorreta! Use: 2707');
-  };
-
-  const copyLink = () => {
-    navigator.clipboard.writeText(currentUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const saveSettings = async (newSettings: AppSettings) => {
@@ -197,52 +190,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       <main className="p-6 max-w-4xl mx-auto w-full flex-1 pb-24">
         {activeTab === 'setup' && (
-          <div className="space-y-6 animate-slide-in">
-             <div className="p-10 bg-gradient-to-br from-zinc-900 to-black text-white rounded-[48px] shadow-2xl relative overflow-hidden border-2 border-white/5">
-                <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12"><Sparkles size={160} /></div>
-                <h3 className="text-4xl font-black mb-6 flex items-center gap-3"><Sparkles className="text-yellow-400" /> Quase lá, Silvia!</h3>
-                
-                <p className="text-zinc-400 font-medium mb-10 leading-relaxed text-lg">
-                  Se você viu a mensagem <strong>"Nenhuma mudança para fazer commit"</strong>, é porque seu código já está guardado no GitHub. Agora só falta colocar ele na internet!
-                </p>
-
-                <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] space-y-6 relative z-10">
-                   <div className="flex items-center gap-4 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl">
-                      <Check className="text-green-500" />
-                      <p className="text-xs font-bold text-green-500 uppercase tracking-widest">Código 100% Salvo no GitHub!</p>
-                   </div>
-
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <a href="https://app.netlify.com/start" target="_blank" className="flex flex-col items-center gap-3 p-6 bg-white rounded-3xl group hover:bg-zinc-100 transition shadow-xl">
-                         <Globe className="text-teal-500" size={40} />
-                         <span className="font-black text-black">Publicar via Netlify</span>
-                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Grátis e Rápido</span>
-                      </a>
-                      <a href="https://vercel.com/new" target="_blank" className="flex flex-col items-center gap-3 p-6 bg-black border border-white/10 rounded-3xl group hover:bg-zinc-800 transition shadow-xl">
-                         <Rocket className="text-white" size={40} />
-                         <span className="font-black text-white">Publicar via Vercel</span>
-                         <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Profissional</span>
-                      </a>
-                   </div>
-                </div>
-
-                <div className="mt-12 p-6 bg-blue-600/10 border border-blue-500/20 rounded-[30px] flex flex-col md:flex-row items-center gap-6">
-                    <div className="p-4 bg-blue-600 rounded-full"><HelpCircle className="text-white" size={32} /></div>
-                    <div className="flex-1 text-center md:text-left">
-                       <p className="font-black text-lg">Onde estão os botões no GitHub?</p>
-                       <p className="text-xs text-blue-300">Atualize a página do seu repositório no GitHub. Eu acabei de criar um arquivo chamado <strong className="text-white">README.md</strong>. Desça a página e você verá os botões coloridos lá embaixo!</p>
-                    </div>
+          <div className="space-y-10 animate-slide-in">
+             <div className="p-6 bg-amber-50 border-2 border-amber-200 rounded-[32px] flex items-start gap-4 shadow-sm animate-pulse">
+                <AlertCircle className="text-amber-600 shrink-0" size={32} />
+                <div className="space-y-1">
+                   <h4 className="font-black text-amber-900 uppercase text-xs tracking-widest">Resolvendo o erro de Nome:</h4>
+                   <p className="text-sm text-amber-800 font-medium leading-relaxed">
+                     A Vercel reclamou porque o nome deve ser <strong>todo minúsculo e sem espaços</strong>.
+                   </p>
                 </div>
              </div>
 
-             <div className="p-8 border-2 border-amber-50 bg-amber-50/30 rounded-[40px] space-y-4">
-                <div className="flex items-center gap-3 text-amber-800">
-                   <Info size={28} />
-                   <h3 className="font-black text-xl">Dica de Silvia para Silvia</h3>
+             <div className="p-10 bg-gradient-to-br from-zinc-900 to-black text-white rounded-[48px] shadow-2xl relative overflow-hidden border-2 border-white/5">
+                <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12"><Sparkles size={160} /></div>
+                <h3 className="text-4xl font-black mb-6 flex items-center gap-3"><Sparkles className="text-yellow-400" /> Publicação na Vercel</h3>
+                
+                <div className="space-y-12">
+                   <div className="flex gap-6 items-start">
+                      <div className="bg-white text-black w-10 h-10 rounded-full flex items-center justify-center font-black shrink-0 text-xl">1</div>
+                      <div className="space-y-3">
+                         <h4 className="text-xl font-black">Selecione o Projeto</h4>
+                         <p className="text-zinc-500 text-sm">No site da Vercel, clique para importar seu projeto do GitHub chamado: <strong className="text-white">kones-gourmet-cardapio</strong></p>
+                      </div>
+                   </div>
+
+                   <div className="flex gap-6 items-start">
+                      <div className="bg-white text-black w-10 h-10 rounded-full flex items-center justify-center font-black shrink-0 text-xl">2</div>
+                      <div className="space-y-4 flex-1">
+                         <h4 className="text-xl font-black text-yellow-400">Copie este nome agora:</h4>
+                         <p className="text-zinc-500 text-sm">No campo <strong>"Project Name"</strong> da Vercel, cole exatamente isto:</p>
+                         <div className="bg-black/60 p-5 rounded-[24px] border-2 border-yellow-500/30 flex items-center justify-between">
+                            <span className="font-mono text-xl text-yellow-400">kones-gourmet-cardapio</span>
+                            <button onClick={() => { navigator.clipboard.writeText('kones-gourmet-cardapio'); alert('Copiado! Agora cole lá na Vercel.'); }} className="p-3 bg-yellow-500/10 rounded-xl text-yellow-500 hover:bg-yellow-500 hover:text-black transition"><Copy size={20}/></button>
+                         </div>
+                         <p className="text-[10px] text-zinc-500 uppercase font-black">Este nome segue todas as regras que a Vercel pediu!</p>
+                      </div>
+                   </div>
+
+                   <div className="flex gap-6 items-start">
+                      <div className="bg-white text-black w-10 h-10 rounded-full flex items-center justify-center font-black shrink-0 text-xl">3</div>
+                      <div className="space-y-3">
+                         <h4 className="text-xl font-black">Finalize o Deploy</h4>
+                         <p className="text-zinc-500 text-sm">Clique no botão azul **"Deploy"**. Ele vai carregar e te dar o link oficial em poucos segundos.</p>
+                      </div>
+                   </div>
                 </div>
-                <p className="text-sm font-medium text-amber-700 leading-relaxed">
-                  Não se preocupe com a mensagem do GitHub. Ela só diz que o código está idêntico ao que você já mandou. Foque agora em clicar no <strong>Netlify</strong> para ganhar seu link <code>.netlify.app</code>!
-                </p>
              </div>
           </div>
         )}
