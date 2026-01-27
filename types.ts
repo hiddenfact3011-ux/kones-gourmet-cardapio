@@ -22,6 +22,14 @@ export interface Category {
   name: string;
 }
 
+export interface Review {
+  id: string;
+  customerName: string;
+  stars: number;
+  comment: string;
+  date: string;
+}
+
 export interface BusinessHours {
   day: string;
   open: string;
