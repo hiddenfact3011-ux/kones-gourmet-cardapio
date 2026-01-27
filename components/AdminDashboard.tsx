@@ -47,7 +47,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
     const todaySales = statsData.history.filter(o => new Date(o.date).toLocaleDateString() === today);
     const totalToday = todaySales.reduce((acc, curr) => acc + curr.total, 0);
     
-    // Produto mais vendido
     const prodCounts: Record<string, number> = {};
     statsData.history.forEach(order => {
       order.items.forEach((item: any) => {
@@ -73,15 +72,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
   };
 
   const handleAddCategory = async () => {
-    if (!newCategoryName) return;
+    if (!newCategoryName.trim()) return;
     setIsSaving(true);
     try {
-      const { data, error } = await supabase.from('categories').insert([{ name: newCategoryName }]).select();
+      const { data, error } = await supabase.from('categories').insert([{ name: newCategoryName.trim() }]).select();
       if (error) throw error;
-      setCategories([...categories, data[0]]);
-      setNewCategoryName('');
-      alert('Categoria criada!');
-    } catch (err) { alert('Erro ao criar categoria.'); } finally { setIsSaving(false); }
+      if (data) {
+        setCategories([...categories, data[0]]);
+        setNewCategoryName('');
+        alert('Categoria criada com sucesso!');
+      }
+    } catch (err) { 
+      console.error(err);
+      alert('Erro ao criar categoria no banco de dados.'); 
+    } finally { setIsSaving(false); }
   };
 
   const deleteCategory = async (id: string) => {
@@ -96,9 +100,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
     setIsSaving(true);
     try {
       setSettings(newSettings);
-      await supabase.from('settings').upsert({ id: 1, data: newSettings });
-      alert("Configurações salvas com sucesso!");
-    } catch (err) { alert("Erro ao salvar."); } finally { setIsSaving(false); }
+      const { error } = await supabase.from('settings').upsert({ id: 1, data: newSettings });
+      if (error) throw error;
+      alert("Alterações salvas com sucesso!");
+    } catch (err) { 
+      console.error(err);
+      alert("Erro ao salvar no banco de dados."); 
+    } finally { setIsSaving(false); }
   };
 
   const handleProductSubmit = async (e: React.FormEvent) => {
@@ -118,7 +126,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
       }
       setEditingProduct(null);
       alert('Produto salvo!');
-    } catch (err) { alert("Erro ao salvar."); } finally { setIsSaving(false); }
+    } catch (err) { alert("Erro ao salvar produto."); } finally { setIsSaving(false); }
   };
 
   const deleteProduct = async (id: string) => {
@@ -211,16 +219,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
               <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                  <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2"><Layers className="text-red-600"/> Gerenciar Categorias</h3>
                  <div className="flex gap-2">
-                    <input type="text" placeholder="Nome da Categoria" className="flex-1 p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[24px] outline-none font-bold" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
-                    <button onClick={handleAddCategory} className="bg-red-600 text-white px-8 rounded-[24px] font-black text-xs uppercase">ADICIONAR</button>
+                    <input type="text" placeholder="Nome da Categoria (Ex: Combos)" className="flex-1 p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[24px] outline-none font-bold" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
+                    <button onClick={handleAddCategory} disabled={isSaving} className="bg-red-600 text-white px-8 rounded-[24px] font-black text-xs uppercase disabled:opacity-50">
+                      {isSaving ? 'SALVANDO...' : 'ADICIONAR'}
+                    </button>
                  </div>
                  <div className="space-y-2 mt-8">
-                    {categories.map(c => (
-                       <div key={c.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100">
-                          <span className="font-black text-gray-700 text-sm uppercase tracking-widest">{c.name}</span>
-                          <button onClick={() => deleteCategory(c.id)} className="p-3 text-red-300 hover:text-red-600 transition-colors"><Trash2 size={18}/></button>
-                       </div>
-                    ))}
+                    {categories.length === 0 ? (
+                      <p className="text-center text-gray-300 font-bold py-10">Nenhuma categoria criada.</p>
+                    ) : (
+                      categories.map(c => (
+                        <div key={c.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100">
+                            <span className="font-black text-gray-700 text-sm uppercase tracking-widest">{c.name}</span>
+                            <button onClick={() => deleteCategory(c.id)} className="p-3 text-red-300 hover:text-red-600 transition-colors"><Trash2 size={18}/></button>
+                        </div>
+                      ))
+                    )}
                  </div>
               </div>
            </div>
@@ -257,18 +271,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
         {activeTab === 'hours' && (
           <div className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-sm space-y-6 animate-slide-in">
              <h3 className="font-black text-gray-900 flex items-center gap-2 text-xl"><Clock className="text-red-600"/> Horários de Funcionamento</h3>
+             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[2px] mb-4">O cardápio avisará se a loja está fechada automaticamente.</p>
              <div className="space-y-3">
                 {settings.businessHours?.map((h, i) => (
                    <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
                       <span className="font-black text-gray-700 w-24 text-sm">{h.day}</span>
                       <div className="flex items-center gap-2">
-                         <input type="time" title="Abre" className="bg-white border-2 border-gray-200 rounded-lg p-1 text-xs font-bold" value={h.open} onChange={e => {
+                         <input type="time" title="Abre" className="bg-white border-2 border-gray-200 rounded-lg p-1 text-xs font-bold outline-none focus:border-red-600" value={h.open} onChange={e => {
                             const nh = [...settings.businessHours!];
                             nh[i].open = e.target.value;
                             setSettings({...settings, businessHours: nh});
                          }} />
                          <span className="font-black text-gray-300">-</span>
-                         <input type="time" title="Fecha" className="bg-white border-2 border-gray-200 rounded-lg p-1 text-xs font-bold" value={h.close} onChange={e => {
+                         <input type="time" title="Fecha" className="bg-white border-2 border-gray-200 rounded-lg p-1 text-xs font-bold outline-none focus:border-red-600" value={h.close} onChange={e => {
                             const nh = [...settings.businessHours!];
                             nh[i].close = e.target.value;
                             setSettings({...settings, businessHours: nh});
@@ -278,11 +293,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                         const newHours = [...settings.businessHours!];
                         newHours[i].isOpen = !newHours[i].isOpen;
                         setSettings({...settings, businessHours: newHours});
-                      }} className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${h.isOpen ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>{h.isOpen ? 'ABERTO' : 'FECHADO'}</button>
+                      }} className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${h.isOpen ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-red-100 text-red-600 border border-red-200'}`}>
+                        {h.isOpen ? 'ABERTO' : 'FECHADO'}
+                      </button>
                    </div>
                 ))}
              </div>
-             <button onClick={() => saveSettings(settings)} className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest mt-4">SALVAR HORÁRIOS</button>
+             <button onClick={() => saveSettings(settings)} disabled={isSaving} className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest mt-4 hover:bg-black transition-all">
+               {isSaving ? 'SALVANDO...' : 'SALVAR HORÁRIOS'}
+             </button>
           </div>
         )}
 
@@ -325,7 +344,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                     </div>
                  </div>
               </div>
-              <button disabled={isSaving} onClick={() => saveSettings(settings)} className="w-full bg-red-600 text-white py-6 rounded-[32px] font-black shadow-xl shadow-red-100 uppercase tracking-widest hover:bg-red-700 transition-all">SALVAR ALTERAÇÕES</button>
+              <button disabled={isSaving} onClick={() => saveSettings(settings)} className="w-full bg-red-600 text-white py-6 rounded-[32px] font-black shadow-xl shadow-red-100 uppercase tracking-widest hover:bg-red-700 transition-all">
+                {isSaving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+              </button>
            </div>
         )}
       </main>
