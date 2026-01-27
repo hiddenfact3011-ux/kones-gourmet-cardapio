@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, Layout, ShieldAlert, BarChart3, Clock, Eye, EyeOff, Star, TrendingUp, Users, ShoppingBag, Edit3, Image as ImageIcon, RotateCcw, Upload, Layers, DollarSign } from 'lucide-react';
+import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, Layout, ShieldAlert, BarChart3, Clock, Eye, EyeOff, Star, TrendingUp, Users, ShoppingBag, Edit3, Image as ImageIcon, RotateCcw, Upload, Layers, DollarSign, ExternalLink, Share2 } from 'lucide-react';
 import { AppSettings, Category, Product, Extra, BusinessHours } from '../types';
 import { ADMIN_PASSWORD, DEFAULT_SETTINGS } from '../constants';
 import { supabase } from '../lib/supabase';
@@ -21,8 +21,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'categories' | 'hours' | 'settings'>('dashboard');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   
-  // Estados para Categorias
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = useState('');
@@ -45,6 +45,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
       setStatsData(empty);
       localStorage.setItem('kones_stats_v2', JSON.stringify(empty));
     }
+  };
+
+  const copyStoreLink = () => {
+    const url = window.location.origin;
+    navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
   };
 
   const dashboardStats = useMemo(() => {
@@ -76,50 +83,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
     else alert('Senha incorreta!');
   };
 
-  // --- CATEGORIAS: ADICIONAR ---
   const handleAddCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) return;
     setIsSaving(true);
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .insert([{ name }])
-        .select();
-
+      const { data, error } = await supabase.from('categories').insert([{ name }]).select();
       if (error) throw error;
-
-      // Recarrega do banco para garantir que sincronizou
       const { data: list } = await supabase.from('categories').select('*').order('name');
       if (list) {
         setCategories(list);
         setNewCategoryName('');
-        alert(`Categoria "${name}" adicionada!`);
       }
     } catch (err: any) {
-      console.error(err);
       alert("Erro ao salvar categoria.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  // --- CATEGORIAS: EDITAR ---
   const handleEditCategory = async (id: string) => {
     if (!editingCategoryName.trim()) return;
     setIsSaving(true);
     try {
-      const { error } = await supabase
-        .from('categories')
-        .update({ name: editingCategoryName })
-        .eq('id', id);
-
+      const { error } = await supabase.from('categories').update({ name: editingCategoryName }).eq('id', id);
       if (error) throw error;
-
       setCategories(prev => prev.map(c => c.id === id ? { ...c, name: editingCategoryName } : c));
       setEditingCategoryId(null);
       setEditingCategoryName('');
-      alert("Categoria alterada com sucesso!");
     } catch (err) {
       alert("Erro ao editar categoria.");
     } finally {
@@ -244,6 +235,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
       <main className="p-6 max-w-5xl mx-auto w-full flex-1 pb-32">
         {activeTab === 'dashboard' && (
           <div className="space-y-8 animate-slide-in">
+             {/* Card para o Link de Compartilhamento */}
+             <div className="bg-ifood p-6 rounded-[32px] text-white shadow-lg shadow-red-200 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+                   <Share2 size={80} />
+                </div>
+                <div className="relative z-10 space-y-4">
+                   <div>
+                      <h3 className="text-lg font-black uppercase tracking-wider">Seu Cardápio Digital</h3>
+                      <p className="text-xs opacity-90 font-medium">Compartilhe este link com seus clientes no WhatsApp</p>
+                   </div>
+                   <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex-1 bg-white/20 backdrop-blur-md rounded-2xl p-4 font-bold text-sm truncate flex items-center">
+                         {window.location.origin}
+                      </div>
+                      <button 
+                        onClick={copyStoreLink}
+                        className="bg-white text-ifood font-black px-6 py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-gray-100 transition shadow-xl shrink-0"
+                      >
+                         {linkCopied ? <Check size={18}/> : <Copy size={18}/>}
+                         {linkCopied ? 'COPIADO!' : 'COPIAR LINK'}
+                      </button>
+                   </div>
+                </div>
+             </div>
+
              <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-black text-gray-900">Desempenho</h2>
                 <button onClick={resetStats} className="text-xs font-black text-red-600 bg-red-50 px-4 py-2 rounded-xl">ZERAR TUDO</button>
@@ -274,15 +290,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
            <div className="space-y-8 animate-slide-in">
               <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                  <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2"><Layers className="text-red-600"/> Gerenciar Categorias</h3>
-                 
-                 {/* Adicionar Nova */}
                  <div className="flex gap-2 mb-10">
                     <input type="text" placeholder="Nome da nova categoria" className="flex-1 p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[24px] outline-none font-bold" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
                     <button onClick={handleAddCategory} disabled={isSaving || !newCategoryName.trim()} className="bg-red-600 text-white px-8 rounded-[24px] font-black text-xs uppercase disabled:opacity-50">
                       {isSaving ? '...' : 'ADICIONAR'}
                     </button>
                  </div>
-
                  <div className="space-y-2">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 ml-2">Suas Categorias ({categories.length})</p>
                     {categories.map(c => (
@@ -395,7 +408,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                        <input type="file" hidden ref={bannerInputRef} accept="image/*" onChange={(e) => handleFileUpload(e, 'banner')} />
                     </div>
                  </div>
-
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8 border-t">
                     <div className="space-y-2">
                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Taxa de Entrega (R$)</label>
@@ -440,7 +452,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                  <select className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-red-600 outline-none font-bold" value={editingProduct.categoryId} onChange={e => setEditingProduct({...editingProduct, categoryId: e.target.value})}>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                  </select>
-
                  <div className="space-y-4 pt-4 border-t">
                     <div className="flex justify-between items-center">
                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Extras deste Produto</h4>
@@ -464,7 +475,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                        ))}
                     </div>
                  </div>
-
                  <div className="flex gap-4 pt-4 border-t">
                     <label className="flex-1 flex items-center justify-center gap-3 p-4 bg-gray-50 rounded-2xl cursor-pointer">
                        <input type="checkbox" className="w-6 h-6 rounded-lg text-red-600" checked={editingProduct.active} onChange={e => setEditingProduct({...editingProduct, active: e.target.checked})} />
