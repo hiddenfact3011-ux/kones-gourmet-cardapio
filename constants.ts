@@ -27,7 +27,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
 export const INITIAL_CATEGORIES: Category[] = [
   { id: '1', name: 'Kones Salgados' },
   { id: '2', name: 'Kones Doces' },
-  { id: '3', name: 'Bebidas' }
+  { id: '3', name: 'Bebidas' },
+  { id: '4', name: 'Combos' },
+  { id: '5', name: 'Porções' },
+  { id: '6', name: 'Adicionais' },
+  { id: '7', name: 'Promoções' }
 ];
 
 export const INITIAL_PRODUCTS: Product[] = [

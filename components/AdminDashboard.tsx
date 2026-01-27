@@ -21,7 +21,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
   const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'products' | 'categories' | 'hours' | 'settings'>('dashboard');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  
+  // Estados para Categorias
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [editingCategoryName, setEditingCategoryName] = useState('');
+  
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
@@ -71,7 +76,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
     else alert('Senha incorreta!');
   };
 
-  // --- CORREÇÃO ROBUSTA: ADICIONAR CATEGORIA ---
+  // --- CATEGORIAS: ADICIONAR ---
   const handleAddCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) return;
@@ -84,23 +89,46 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
 
       if (error) throw error;
 
-      // Busca a lista atualizada do banco para garantir que apareça na tela da Silvia
+      // Recarrega do banco para garantir que sincronizou
       const { data: list } = await supabase.from('categories').select('*').order('name');
-      if (list && list.length > 0) {
+      if (list) {
         setCategories(list);
         setNewCategoryName('');
-        alert(`Categoria "${name}" criada com sucesso!`);
+        alert(`Categoria "${name}" adicionada!`);
       }
     } catch (err: any) {
-      console.error('Erro ao criar categoria:', err);
-      alert("Erro ao criar categoria. Verifique sua internet.");
+      console.error(err);
+      alert("Erro ao salvar categoria.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // --- CATEGORIAS: EDITAR ---
+  const handleEditCategory = async (id: string) => {
+    if (!editingCategoryName.trim()) return;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('categories')
+        .update({ name: editingCategoryName })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setCategories(prev => prev.map(c => c.id === id ? { ...c, name: editingCategoryName } : c));
+      setEditingCategoryId(null);
+      setEditingCategoryName('');
+      alert("Categoria alterada com sucesso!");
+    } catch (err) {
+      alert("Erro ao editar categoria.");
     } finally {
       setIsSaving(false);
     }
   };
 
   const deleteCategory = async (id: string) => {
-    if (!confirm('Excluir esta categoria?')) return;
+    if (!confirm('Excluir esta categoria? Isso pode afetar os produtos nela.')) return;
     try {
       const { error } = await supabase.from('categories').delete().eq('id', id);
       if (error) throw error;
@@ -110,7 +138,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
     }
   };
 
-  // --- SALVAR CONFIGURAÇÕES ---
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
@@ -118,17 +145,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
         ...settings,
         businessHours: settings.businessHours || DEFAULT_SETTINGS.businessHours
       };
-
-      const { error } = await supabase
-        .from('settings')
-        .upsert({ id: 1, data: finalSettings });
-
+      const { error } = await supabase.from('settings').upsert({ id: 1, data: finalSettings });
       if (error) throw error;
-      
       setSettings(finalSettings);
-      alert("Salvo com sucesso!");
+      alert("Configurações salvas!");
     } catch (err: any) {
-      console.error('Erro ao salvar:', err);
       alert("Erro ao gravar dados.");
     } finally {
       setIsSaving(false);
@@ -151,7 +172,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
         setProducts(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
       }
       setEditingProduct(null);
-      alert('Produto atualizado!');
+      alert('Produto salvo!');
     } catch (err: any) { 
       alert("Erro ao salvar produto."); 
     } finally { 
@@ -253,23 +274,36 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
            <div className="space-y-8 animate-slide-in">
               <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
                  <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2"><Layers className="text-red-600"/> Gerenciar Categorias</h3>
-                 <div className="flex gap-2">
-                    <input type="text" placeholder="Ex: Bebidas, Combos, Sobremesas" className="flex-1 p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[24px] outline-none font-bold" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
+                 
+                 {/* Adicionar Nova */}
+                 <div className="flex gap-2 mb-10">
+                    <input type="text" placeholder="Nome da nova categoria" className="flex-1 p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[24px] outline-none font-bold" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
                     <button onClick={handleAddCategory} disabled={isSaving || !newCategoryName.trim()} className="bg-red-600 text-white px-8 rounded-[24px] font-black text-xs uppercase disabled:opacity-50">
-                      {isSaving ? 'SALVANDO...' : 'ADICIONAR'}
+                      {isSaving ? '...' : 'ADICIONAR'}
                     </button>
                  </div>
-                 <div className="space-y-2 mt-8">
-                    {categories.length === 0 ? (
-                      <p className="text-center text-gray-300 font-bold py-10">Crie sua primeira categoria acima.</p>
-                    ) : (
-                      categories.map(c => (
-                        <div key={c.id} className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-red-200 transition-all">
-                            <span className="font-black text-gray-700 text-sm uppercase tracking-widest">{c.name}</span>
-                            <button onClick={() => deleteCategory(c.id)} className="p-3 text-red-300 hover:text-red-600 transition-colors"><Trash2 size={18}/></button>
-                        </div>
-                      ))
-                    )}
+
+                 <div className="space-y-2">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 ml-2">Suas Categorias ({categories.length})</p>
+                    {categories.map(c => (
+                      <div key={c.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group">
+                          {editingCategoryId === c.id ? (
+                            <div className="flex-1 flex gap-2">
+                               <input type="text" className="flex-1 p-2 bg-white border border-red-600 rounded-lg outline-none font-bold text-sm" value={editingCategoryName} onChange={e => setEditingCategoryName(e.target.value)} autoFocus />
+                               <button onClick={() => handleEditCategory(c.id)} className="p-2 bg-green-500 text-white rounded-lg"><Check size={18}/></button>
+                               <button onClick={() => setEditingCategoryId(null)} className="p-2 bg-gray-300 text-white rounded-lg"><X size={18}/></button>
+                            </div>
+                          ) : (
+                            <>
+                              <span className="font-black text-gray-700 text-sm uppercase tracking-widest">{c.name}</span>
+                              <div className="flex gap-1">
+                                <button onClick={() => { setEditingCategoryId(c.id); setEditingCategoryName(c.name); }} className="p-2 text-gray-400 hover:text-blue-600"><Edit3 size={18}/></button>
+                                <button onClick={() => deleteCategory(c.id)} className="p-2 text-gray-400 hover:text-red-600"><Trash2 size={18}/></button>
+                              </div>
+                            </>
+                          )}
+                      </div>
+                    ))}
                  </div>
               </div>
            </div>
