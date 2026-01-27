@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
-import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, PlusCircle, AlertTriangle, Database, Wifi, WifiOff, ExternalLink, Info, Code, Rocket, Eye, Sparkles, HelpCircle, Share2, Globe, Github, ArrowRight, AlertCircle, MousePointer2, ClipboardCheck, Clock, UploadCloud, Layout, ShieldAlert, Send } from 'lucide-react';
-import { AppSettings, Category, Product, Extra } from '../types';
+import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, Layout, ShieldAlert, BarChart3, Clock, Eye, EyeOff, Star, TrendingUp, Users, ShoppingBag } from 'lucide-react';
+import { AppSettings, Category, Product } from '../types';
 import { ADMIN_PASSWORD } from '../constants';
 import { supabase } from '../lib/supabase';
 
@@ -16,124 +17,51 @@ interface AdminDashboardProps {
   setIsAdminLoggedIn: (val: boolean) => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
-  settings, setSettings, categories, setCategories, products, setProducts, onClose, isAdminLoggedIn, setIsAdminLoggedIn 
-}) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, categories, setCategories, products, setProducts, onClose, isAdminLoggedIn, setIsAdminLoggedIn }) => {
   const [password, setPassword] = useState('');
-  const [activeTab, setActiveTab] = useState<'settings' | 'categories' | 'products' | 'setup' | 'debug'>('settings');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'settings' | 'categories' | 'products' | 'hours'>('dashboard');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [dbStatus, setDbStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [isSaving, setIsSaving] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
-
-  useEffect(() => {
-    checkConnection();
-  }, []);
-
-  const checkConnection = async () => {
-    try {
-      const { error } = await supabase.from('settings').select('id').limit(1);
-      if (error) throw error;
-      setDbStatus('online');
-    } catch (e) {
-      setDbStatus('offline');
-    }
-  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (password === ADMIN_PASSWORD) setIsAdminLoggedIn(true);
-    else alert('Senha incorreta! Use: 2707');
-  };
-
-  const handleCopyLink = (url: string) => {
-    navigator.clipboard.writeText(url);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 3000);
+    else alert('Senha incorreta!');
   };
 
   const saveSettings = async (newSettings: AppSettings) => {
     setIsSaving(true);
     try {
       setSettings(newSettings);
-      const { error } = await supabase.from('settings').upsert({ id: 1, data: newSettings });
-      if (error) throw error;
-      alert("Configurações salvas!");
-    } catch (err: any) {
-      alert("Erro ao salvar: " + err.message);
-    } finally {
-      setIsSaving(false);
-    }
+      await supabase.from('settings').upsert({ id: 1, data: newSettings });
+      alert("Sucesso!");
+    } catch (err) { alert("Erro ao salvar"); } finally { setIsSaving(false); }
   };
 
-  const saveProduct = async (prod: Product) => {
-    setIsSaving(true);
-    try {
-      const isNew = !products.find(p => p.id === prod.id);
-      if (isNew) {
-        const { data, error } = await supabase.from('products').insert([prod]).select();
-        if (error) throw error;
-        if (data) setProducts([...products, data[0]]);
-      } else {
-        const { error } = await supabase.from('products').update(prod).eq('id', prod.id);
-        if (error) throw error;
-        setProducts(products.map(p => p.id === prod.id ? prod : p));
-      }
-      setEditingProduct(null);
-    } catch (err: any) {
-      alert("Erro ao salvar: " + err.message);
-    } finally {
-      setIsSaving(false);
-    }
+  const toggleProductActive = async (product: Product) => {
+    const updated = { ...product, active: !product.active };
+    await supabase.from('products').update(updated).eq('id', product.id);
+    setProducts(products.map(p => p.id === product.id ? updated : p));
   };
 
-  const deleteProduct = async (id: string) => {
-    if (confirm('Excluir este produto?')) {
-      const { error } = await supabase.from('products').delete().eq('id', id);
-      if (!error) setProducts(products.filter(p => p.id !== id));
+  const setDailySuggestion = async (productId: string) => {
+    const updatedProds = products.map(p => ({ ...p, isDailySuggestion: p.id === productId }));
+    for(const p of updatedProds) {
+       await supabase.from('products').update(p).eq('id', p.id);
     }
-  };
-
-  const addCategory = async (name: string) => {
-    const newCat = { id: Math.random().toString(36).substr(2, 9), name };
-    const { error } = await supabase.from('categories').insert([newCat]);
-    if (!error) setCategories([...categories, newCat]);
-  };
-
-  const deleteCategory = async (id: string) => {
-    if (confirm('Excluir categoria?')) {
-      const { error } = await supabase.from('categories').delete().eq('id', id);
-      if (!error) setCategories(categories.filter(c => c.id !== id));
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'logo' | 'banner' | 'prod') => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        if (type === 'logo') setSettings({ ...settings, logo: base64 });
-        if (type === 'banner') setSettings({ ...settings, banner: base64 });
-        if (type === 'prod' && editingProduct) setEditingProduct({ ...editingProduct, image: base64 });
-      };
-      reader.readAsDataURL(file);
-    }
+    setProducts(updatedProds);
   };
 
   if (!isAdminLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
-        <div className="bg-white p-10 rounded-[48px] shadow-2xl w-full max-w-md text-center border-t-[12px] border-red-600">
-          <div className="mb-6 inline-flex p-4 bg-red-50 rounded-full text-red-600">
-             <SettingsIcon size={48} />
-          </div>
-          <h2 className="text-3xl font-black mb-1 text-gray-900 leading-none">Painel Administrativo</h2>
-          <p className="text-gray-400 mb-8 font-bold text-xs uppercase tracking-widest mt-2">Kones Gourmet</p>
+        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-md text-center border-t-[12px] border-red-600">
+          <SettingsIcon size={48} className="mx-auto text-red-600 mb-6"/>
+          <h2 className="text-3xl font-black mb-8 text-gray-900">Admin</h2>
           <form onSubmit={handleLogin} className="space-y-4">
-            <input type="password" className="w-full border-2 border-gray-100 bg-gray-50 rounded-2xl p-5 outline-none focus:border-red-600 transition text-center text-3xl tracking-[10px] font-black" placeholder="****" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
-            <button className="w-full bg-red-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-red-200 hover:bg-red-700 active:scale-95 transition-all text-lg uppercase tracking-widest">Acessar Sistema</button>
-            <button type="button" onClick={onClose} className="text-gray-400 font-bold hover:text-red-600 text-sm">Voltar ao Cardápio</button>
+            <input type="password" className="w-full border-2 border-gray-100 bg-gray-50 rounded-2xl p-5 outline-none focus:border-red-600 text-center text-3xl tracking-[10px]" placeholder="****" value={password} onChange={e => setPassword(e.target.value)} autoFocus />
+            <button className="w-full bg-red-600 text-white font-black py-5 rounded-2xl shadow-xl hover:bg-red-700 transition-all uppercase tracking-widest">Acessar</button>
+            <button type="button" onClick={onClose} className="text-gray-400 font-bold hover:text-red-600 text-sm">Voltar</button>
           </form>
         </div>
       </div>
@@ -141,220 +69,144 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <header className="bg-black text-white p-6 flex items-center justify-between sticky top-0 z-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col font-['Inter']">
+      <header className="bg-zinc-900 text-white p-6 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition"><ArrowLeft /></button>
-          <div>
-            <span className="font-black text-xl block leading-none">Administração</span>
-            <div className="flex items-center gap-1.5 mt-1">
-              <div className={`w-2 h-2 rounded-full ${dbStatus === 'online' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
-              <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">Sincronização: {dbStatus === 'online' ? 'Ativa' : 'Offline'}</span>
-            </div>
-          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition"><ArrowLeft /></button>
+          <span className="font-black text-lg uppercase tracking-widest">Painel Kones</span>
         </div>
-        <div className="flex items-center gap-2">
-            <button onClick={() => setActiveTab('debug')} className="text-amber-500 hover:text-amber-400 p-2 flex items-center gap-1 font-black text-[10px] uppercase tracking-tighter"><ShieldAlert size={16}/> Link não abre?</button>
-            <button onClick={() => setIsAdminLoggedIn(false)} className="bg-red-600 px-6 py-2 rounded-xl font-bold text-sm hover:bg-red-700 transition">Sair</button>
-        </div>
+        <button onClick={() => setIsAdminLoggedIn(false)} className="bg-red-600 px-6 py-2 rounded-xl font-bold text-xs hover:bg-red-700 transition">SAIR</button>
       </header>
 
       <nav className="flex border-b bg-white sticky top-[80px] z-40 overflow-x-auto hide-scrollbar">
-        <button onClick={() => setActiveTab('settings')} className={`flex-1 p-5 font-black flex flex-col items-center gap-1 min-w-[100px] transition-all ${activeTab === 'settings' ? 'text-red-600 border-b-4 border-red-600 bg-red-50/30' : 'text-gray-300'}`}><SettingsIcon size={18} /> Geral</button>
-        <button onClick={() => setActiveTab('categories')} className={`flex-1 p-5 font-black flex flex-col items-center gap-1 min-w-[100px] transition-all ${activeTab === 'categories' ? 'text-red-600 border-b-4 border-red-600 bg-red-50/30' : 'text-gray-300'}`}><Tag size={18} /> Categorias</button>
-        <button onClick={() => setActiveTab('products')} className={`flex-1 p-5 font-black flex flex-col items-center gap-1 min-w-[100px] transition-all ${activeTab === 'products' ? 'text-red-600 border-b-4 border-red-600 bg-red-50/30' : 'text-gray-300'}`}><Package size={18} /> Produtos</button>
-        <button onClick={() => setActiveTab('setup')} className={`flex-1 p-5 font-black flex flex-col items-center gap-1 min-w-[100px] transition-all ${activeTab === 'setup' ? 'text-teal-600 border-b-4 border-teal-600 bg-teal-50/30' : 'text-gray-300'}`}><Layout size={18} /> Publicar</button>
+        <button onClick={() => setActiveTab('dashboard')} className={`flex-1 p-5 font-black flex flex-col items-center gap-1 min-w-[100px] transition-all text-[10px] uppercase tracking-widest ${activeTab === 'dashboard' ? 'text-red-600 border-b-4 border-red-600 bg-red-50/30' : 'text-gray-300'}`}><BarChart3 size={18} /> Resumo</button>
+        <button onClick={() => setActiveTab('products')} className={`flex-1 p-5 font-black flex flex-col items-center gap-1 min-w-[100px] transition-all text-[10px] uppercase tracking-widest ${activeTab === 'products' ? 'text-red-600 border-b-4 border-red-600 bg-red-50/30' : 'text-gray-300'}`}><Package size={18} /> Itens</button>
+        <button onClick={() => setActiveTab('hours')} className={`flex-1 p-5 font-black flex flex-col items-center gap-1 min-w-[100px] transition-all text-[10px] uppercase tracking-widest ${activeTab === 'hours' ? 'text-red-600 border-b-4 border-red-600 bg-red-50/30' : 'text-gray-300'}`}><Clock size={18} /> Horários</button>
+        <button onClick={() => setActiveTab('settings')} className={`flex-1 p-5 font-black flex flex-col items-center gap-1 min-w-[100px] transition-all text-[10px] uppercase tracking-widest ${activeTab === 'settings' ? 'text-red-600 border-b-4 border-red-600 bg-red-50/30' : 'text-gray-300'}`}><SettingsIcon size={18} /> Loja</button>
       </nav>
 
-      <main className="p-6 max-w-4xl mx-auto w-full flex-1 pb-24">
-        {activeTab === 'setup' && (
-          <div className="space-y-10 animate-slide-in">
-             <div className="p-10 bg-gradient-to-br from-zinc-900 to-black text-white rounded-[48px] shadow-2xl relative overflow-hidden border-2 border-white/5">
-                <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12"><Github size={160} /></div>
-                <h3 className="text-4xl font-black mb-6 flex items-center gap-3 text-teal-400">Publicar Site</h3>
-                
-                <div className="space-y-12">
-                   {/* ALERTA DE NOME DUPLICADO */}
-                   <div className="p-8 bg-red-600/20 border-2 border-red-500/40 rounded-[40px] space-y-4">
-                      <h4 className="text-2xl font-black flex items-center gap-3 text-red-400"><AlertTriangle /> "Name already taken"?</h4>
-                      <p className="text-red-100 font-bold leading-relaxed">
-                         Se você viu essa mensagem, significa que o nome já foi usado por outra pessoa.
-                      </p>
-                      <div className="bg-black/40 p-6 rounded-3xl border border-red-500/20">
-                         <p className="text-sm text-white font-black">Mude o "Project Name" para algo único:</p>
-                         <ul className="mt-3 space-y-2 text-xs text-red-200">
-                            <li>❌ <span className="line-through">kones-gourmet-cardápio</span> (Não use acentos!)</li>
-                            <li>✅ <span className="text-green-400 font-black">kones-gourmet-silvia</span></li>
-                            <li>✅ <span className="text-green-400 font-black">kones-gourmet-oficial</span></li>
-                         </ul>
-                      </div>
-                   </div>
+      <main className="p-6 max-w-5xl mx-auto w-full flex-1 pb-24">
+        {activeTab === 'dashboard' && (
+          <div className="space-y-8 animate-slide-in">
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm space-y-1">
+                   <div className="bg-blue-50 text-blue-500 w-10 h-10 rounded-full flex items-center justify-center"><TrendingUp size={20}/></div>
+                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">Vendas Hoje</p>
+                   <p className="text-2xl font-black text-gray-900 leading-none">R$ 458,90</p>
+                </div>
+                <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm space-y-1">
+                   <div className="bg-green-50 text-green-500 w-10 h-10 rounded-full flex items-center justify-center"><ShoppingBag size={20}/></div>
+                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">Pedidos</p>
+                   <p className="text-2xl font-black text-gray-900 leading-none">12</p>
+                </div>
+                <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm space-y-1">
+                   <div className="bg-purple-50 text-purple-500 w-10 h-10 rounded-full flex items-center justify-center"><Users size={20}/></div>
+                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">Visitas</p>
+                   <p className="text-2xl font-black text-gray-900 leading-none">1.2k</p>
+                </div>
+                <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm space-y-1">
+                   <div className="bg-amber-50 text-amber-500 w-10 h-10 rounded-full flex items-center justify-center"><Star size={20}/></div>
+                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">Ticket Médio</p>
+                   <p className="text-2xl font-black text-gray-900 leading-none">R$ 38,24</p>
+                </div>
+             </div>
 
-                   <div className="p-8 bg-blue-600/20 border-2 border-blue-500/40 rounded-[40px] space-y-6 relative">
-                      <div className="absolute -top-6 -left-6 bg-blue-500 p-4 rounded-full shadow-lg animate-bounce">
-                         <MousePointer2 className="text-white" size={32} />
+             <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
+                <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2">🏆 Mais Vendidos</h3>
+                <div className="space-y-4">
+                   {products.slice(0, 3).map((p, idx) => (
+                      <div key={p.id} className="flex items-center gap-4">
+                         <span className="font-black text-red-600 text-lg w-6">#{idx+1}</span>
+                         <img src={p.image} className="w-12 h-12 rounded-xl object-cover" />
+                         <div className="flex-1">
+                            <p className="font-bold text-sm text-gray-800">{p.name}</p>
+                            <div className="h-1.5 w-full bg-gray-50 rounded-full mt-1 overflow-hidden">
+                               <div className="h-full bg-red-600 rounded-full" style={{width: `${100 - (idx * 30)}%`}}></div>
+                            </div>
+                         </div>
+                         <span className="font-black text-gray-400 text-xs">{(20 - idx * 5)} vds</span>
                       </div>
-                      <h4 className="text-2xl font-black flex items-center gap-3"><Github /> Primeiro: Salve no Gatinho</h4>
-                      <p className="text-blue-100 font-bold leading-relaxed">
-                         Silvia, lembre de clicar no ícone do **Gato (GitHub)** na sua barra lateral antes de ir para a Netlify.
-                      </p>
-                   </div>
+                   ))}
+                </div>
+             </div>
 
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-4">
-                         <div className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center font-black text-xl">1</div>
-                         <h4 className="font-black text-xl">Netlify</h4>
-                         <p className="text-zinc-400 text-sm">Vá em **Add new site** -> **Import existing project**.</p>
+             <div className="bg-zinc-900 p-8 rounded-[40px] text-white overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-8 opacity-5"><TrendingUp size={160}/></div>
+                <h3 className="text-lg font-black mb-6 uppercase tracking-widest text-red-500">Desempenho Semanal</h3>
+                <div className="flex items-end justify-between h-40 gap-2">
+                   {[40, 60, 35, 90, 75, 55, 100].map((val, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                         <div className="w-full bg-red-600 rounded-t-xl transition-all duration-1000" style={{height: `${val}%`}}></div>
+                         <span className="text-[8px] font-black text-zinc-500">SEG TER QUA QUI SEX SAB DOM'.split(' ')[i]</span>
                       </div>
-
-                      <div className="bg-white/5 p-8 rounded-[40px] border border-white/10 space-y-4">
-                         <div className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center font-black text-xl">2</div>
-                         <h4 className="font-black text-xl">Novo Nome</h4>
-                         <p className="text-zinc-400 text-sm">Se der erro de nome, adicione seu nome ou cidade ao final.</p>
-                      </div>
-                   </div>
+                   ))}
                 </div>
              </div>
           </div>
         )}
 
-        {/* Mantendo as outras abas... */}
-        {activeTab === 'debug' && (
-          <div className="space-y-8 animate-slide-in">
-             <div className="p-10 bg-amber-50 border-4 border-amber-200 rounded-[48px] shadow-xl">
-                <h3 className="text-3xl font-black mb-6 text-amber-900 flex items-center gap-3"><ShieldAlert size={32} /> Ajuda Rápida</h3>
-                <div className="space-y-6">
-                   <div className="bg-white p-6 rounded-3xl border border-amber-200 flex gap-4">
-                      <div className="bg-amber-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-black shrink-0">!</div>
-                      <div>
-                        <p className="font-black text-amber-900">Link com erro?</p>
-                        <p className="text-sm text-amber-700">Confira se o nome do projeto não tem espaços nem acentos.</p>
+        {activeTab === 'products' && (
+           <div className="space-y-6 animate-slide-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 {products.map(p => (
+                   <div key={p.id} className={`bg-white p-4 rounded-3xl border-2 transition-all flex items-center gap-4 shadow-sm ${p.active ? 'border-gray-50' : 'border-red-100 bg-red-50/10'}`}>
+                      <div className="relative">
+                        <img src={p.image} className={`w-16 h-16 rounded-xl object-cover ${!p.active && 'grayscale'}`} />
+                        {!p.active && <div className="absolute inset-0 bg-red-600/20 rounded-xl flex items-center justify-center"><EyeOff className="text-red-600" size={20}/></div>}
+                      </div>
+                      <div className="flex-1">
+                         <h4 className={`font-black text-sm ${!p.active ? 'text-gray-400' : 'text-gray-800'}`}>{p.name}</h4>
+                         <p className="text-red-600 font-black text-xs">R$ {p.price.toFixed(2)}</p>
+                      </div>
+                      <div className="flex gap-2">
+                         <button onClick={() => setDailySuggestion(p.id)} className={`p-2 rounded-xl transition ${p.isDailySuggestion ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-300'}`} title="Sugestão do Dia"><Star size={16}/></button>
+                         <button onClick={() => toggleProductActive(p)} className={`p-2 rounded-xl transition ${p.active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`} title={p.active ? 'Pausar no Cardápio' : 'Ativar no Cardápio'}>{p.active ? <Eye size={16}/> : <EyeOff size={16}/>}</button>
                       </div>
                    </div>
-                </div>
+                 ))}
+              </div>
+           </div>
+        )}
+
+        {activeTab === 'hours' && (
+          <div className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-sm space-y-6 animate-slide-in">
+             <h3 className="font-black text-gray-900 flex items-center gap-2 text-xl"><Clock className="text-red-600"/> Horários de Funcionamento</h3>
+             <div className="space-y-3">
+                {settings.businessHours?.map((h, i) => (
+                   <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                      <span className="font-black text-gray-700 w-24 text-sm">{h.day}</span>
+                      <div className="flex items-center gap-2">
+                         <input type="time" className="bg-white border-2 border-gray-200 rounded-lg p-1 text-xs font-bold" value={h.open} />
+                         <span className="font-black text-gray-300">-</span>
+                         <input type="time" className="bg-white border-2 border-gray-200 rounded-lg p-1 text-xs font-bold" value={h.close} />
+                      </div>
+                      <button onClick={() => {
+                        const newHours = [...settings.businessHours!];
+                        newHours[i].isOpen = !newHours[i].isOpen;
+                        saveSettings({...settings, businessHours: newHours});
+                      }} className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${h.isOpen ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>{h.isOpen ? 'ABERTO' : 'FECHADO'}</button>
+                   </div>
+                ))}
              </div>
           </div>
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-8 animate-slide-in">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-              <div className="space-y-3">
-                <p className="font-black text-sm text-gray-700">Logo da Loja</p>
-                <label className="block relative w-32 h-32 rounded-[32px] border-4 border-gray-100 overflow-hidden cursor-pointer hover:border-red-400 transition group shadow-md">
-                  <img src={settings.logo} className="w-full h-full object-cover group-hover:opacity-40 transition" />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><Camera className="text-red-600 w-8 h-8" /></div>
-                  <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'logo')} />
-                </label>
+           <div className="space-y-8 animate-slide-in">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className="space-y-2">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Nome da Loja</p>
+                    <input type="text" className="w-full p-5 bg-white border-2 border-gray-50 rounded-[28px] outline-none font-bold" value={settings.storeName} onChange={e => setSettings({...settings, storeName: e.target.value})} />
+                 </div>
+                 <div className="space-y-2">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Taxa de Entrega (R$)</p>
+                    <input type="number" className="w-full p-5 bg-white border-2 border-gray-50 rounded-[28px] outline-none font-bold" value={settings.deliveryFee} onChange={e => setSettings({...settings, deliveryFee: Number(e.target.value)})} />
+                 </div>
               </div>
-              <div className="space-y-3">
-                <p className="font-black text-sm text-gray-700">Capa do Menu</p>
-                <label className="block relative w-full h-32 rounded-[32px] border-4 border-gray-100 overflow-hidden cursor-pointer hover:border-red-400 transition group shadow-md">
-                  <img src={settings.banner} className="w-full h-full object-cover group-hover:opacity-40 transition" />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><Camera className="text-red-600 w-8 h-8" /></div>
-                  <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'banner')} />
-                </label>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="col-span-1 md:col-span-2">
-                <label className="text-[10px] font-black text-gray-400 ml-2 uppercase tracking-widest">Nome da Loja</label>
-                <input type="text" className="w-full p-4 bg-gray-50 rounded-2xl outline-none border-2 border-transparent focus:border-red-600 font-bold" value={settings.storeName} onChange={e => setSettings({...settings, storeName: e.target.value})} />
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-gray-400 ml-2 uppercase tracking-widest">WhatsApp (DDD + Número)</label>
-                <input type="text" className="w-full p-4 bg-gray-50 rounded-2xl outline-none border-2 border-transparent focus:border-red-600 font-bold" value={settings.whatsapp} onChange={e => setSettings({...settings, whatsapp: e.target.value.replace(/\D/g,'')})} />
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-gray-400 ml-2 uppercase tracking-widest">Taxa de Entrega (R$)</label>
-                <input type="number" className="w-full p-4 bg-gray-50 rounded-2xl outline-none border-2 border-transparent focus:border-red-600 font-bold" value={settings.deliveryFee} onChange={e => setSettings({...settings, deliveryFee: Number(e.target.value)})} />
-              </div>
-            </div>
-            <button disabled={isSaving} onClick={() => saveSettings(settings)} className="w-full bg-red-600 text-white py-6 rounded-[32px] font-black flex items-center justify-center gap-3 active:scale-95 transition-all shadow-2xl shadow-red-200 disabled:bg-gray-400">
-              {isSaving ? "Gravando..." : <><Save size={24} /> SALVAR ALTERAÇÕES GERAIS</>}
-            </button>
-          </div>
-        )}
-
-        {activeTab === 'categories' && (
-          <div className="space-y-4 animate-slide-in">
-            <div className="flex gap-2">
-              <input id="newCat" type="text" placeholder="Nome da Categoria..." className="flex-1 p-4 bg-gray-50 rounded-2xl outline-none border-2 border-transparent focus:border-red-600 font-bold" />
-              <button onClick={() => { const val = (document.getElementById('newCat') as HTMLInputElement).value; if(val) { addCategory(val); (document.getElementById('newCat') as HTMLInputElement).value = ''; } }} className="bg-red-600 text-white px-8 rounded-2xl font-black shadow-lg shadow-red-100 active:scale-95 transition">Add</button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {categories.map(c => (
-                <div key={c.id} className="flex justify-between items-center p-5 bg-white rounded-3xl border-2 border-gray-50 shadow-sm group hover:border-red-100 transition">
-                  <span className="font-black text-gray-700">{c.name}</span>
-                  <button onClick={() => deleteCategory(c.id)} className="text-red-600 p-2 hover:bg-red-50 rounded-xl transition md:opacity-0 group-hover:opacity-100"><Trash2 size={20} /></button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'products' && (
-          <div className="space-y-6 animate-slide-in">
-            <button onClick={() => setEditingProduct({ id: Math.random().toString(36).substr(2, 9), name: '', description: '', price: 0, image: 'https://via.placeholder.com/300', categoryId: categories[0]?.id || '', extras: [], active: true })} className="w-full bg-green-600 text-white py-6 rounded-[32px] font-black shadow-xl shadow-green-100 flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-green-700">
-              <Plus size={28} /> Novo Produto
-            </button>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {products.map(p => (
-                <div key={p.id} className="p-4 border-2 border-gray-50 rounded-[32px] flex gap-4 items-center bg-white shadow-sm hover:shadow-lg transition cursor-default group">
-                  <img src={p.image} className="w-20 h-20 rounded-[20px] object-cover border-2 border-gray-50 shadow-sm" />
-                  <div className="flex-1">
-                    <p className="font-black text-gray-800 leading-tight group-hover:text-red-600 transition">{p.name}</p>
-                    <p className="text-sm font-black text-red-600 mt-1">R$ {p.price.toFixed(2)}</p>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <button onClick={() => setEditingProduct(p)} className="p-3 bg-gray-50 text-gray-400 rounded-xl hover:bg-red-600 hover:text-white transition shadow-sm"><SettingsIcon size={20} /></button>
-                    <button onClick={() => deleteProduct(p.id)} className="p-3 bg-gray-50 text-gray-300 rounded-xl hover:bg-red-50 hover:text-red-600 transition shadow-sm"><Trash2 size={20} /></button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+              <button disabled={isSaving} onClick={() => saveSettings(settings)} className="w-full bg-red-600 text-white py-6 rounded-[32px] font-black shadow-xl shadow-red-100 uppercase tracking-widest">Salvar Alterações</button>
+           </div>
         )}
       </main>
-
-      {editingProduct && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto">
-          <div className="bg-white w-full max-w-2xl rounded-[48px] p-8 space-y-6 my-8 animate-slide-in relative border-t-[12px] border-red-600">
-             <button onClick={() => setEditingProduct(null)} className="absolute top-6 right-6 p-3 bg-gray-100 rounded-full hover:rotate-90 transition-all"><X /></button>
-             <div className="flex flex-col md:flex-row gap-8">
-                <div className="w-full md:w-1/2 space-y-4">
-                  <label className="block relative aspect-square rounded-[40px] overflow-hidden border-4 border-gray-100 cursor-pointer group shadow-2xl">
-                      <img src={editingProduct.image} className="w-full h-full object-cover group-hover:scale-110 transition duration-700" />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition"><Camera className="text-white w-12 h-12" /></div>
-                      <input type="file" className="hidden" onChange={e => handleFileUpload(e, 'prod')} />
-                  </label>
-                </div>
-                <div className="flex-1 space-y-5">
-                  <h3 className="text-3xl font-black text-gray-900 leading-none">Editar Produto</h3>
-                  <div className="space-y-4">
-                    <input type="text" placeholder="Nome do Produto" className="w-full p-4 bg-gray-50 rounded-2xl outline-none border-2 border-transparent focus:border-red-600 font-bold" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} />
-                    <textarea placeholder="Ingredientes..." className="w-full p-4 bg-gray-50 rounded-2xl outline-none h-24 border-2 border-transparent focus:border-red-600 text-sm font-medium" value={editingProduct.description} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} />
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase">Preço Venda</label>
-                            <input type="number" step="0.01" className="w-full p-4 bg-gray-50 rounded-2xl outline-none border-2 border-transparent focus:border-red-600 font-black text-red-600" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: Number(e.target.value)})} />
-                        </div>
-                        <div>
-                            <label className="text-[10px] font-black text-gray-400 ml-1 uppercase">Categoria</label>
-                            <select className="w-full p-4 bg-gray-50 rounded-2xl outline-none border-2 border-transparent focus:border-red-600 font-bold" value={editingProduct.categoryId} onChange={e => setEditingProduct({...editingProduct, categoryId: e.target.value})}>
-                              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                        </div>
-                    </div>
-                  </div>
-                  <button disabled={isSaving} onClick={() => saveProduct(editingProduct)} className="w-full bg-red-600 text-white py-5 rounded-[28px] font-black shadow-xl shadow-red-200 flex items-center justify-center gap-2 active:scale-95 transition-all text-lg">
-                    {isSaving ? "Gravando..." : <><Save size={20} /> SALVAR PRODUTO</>}
-                  </button>
-                </div>
-             </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

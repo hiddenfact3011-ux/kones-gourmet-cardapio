@@ -14,11 +14,19 @@ export interface Product {
   categoryId: string;
   extras: Extra[];
   active: boolean;
+  isDailySuggestion?: boolean;
 }
 
 export interface Category {
   id: string;
   name: string;
+}
+
+export interface BusinessHours {
+  day: string;
+  open: string;
+  close: string;
+  isOpen: boolean;
 }
 
 export interface AppSettings {
@@ -29,6 +37,8 @@ export interface AppSettings {
   pixKey: string;
   pixName: string;
   deliveryFee: number;
+  businessHours?: BusinessHours[];
+  dailySuggestionId?: string;
 }
 
 export interface CartItem {
@@ -39,4 +49,5 @@ export interface CartItem {
   notes: string;
 }
 
-export type View = 'menu' | 'admin' | 'product-detail';
+export type View = 'menu' | 'admin';
+export type CartStep = 'items' | 'checkout' | 'confirm';

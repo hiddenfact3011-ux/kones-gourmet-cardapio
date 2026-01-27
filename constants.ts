@@ -1,14 +1,17 @@
 
-import { AppSettings, Category, Product } from './types';
-
-export const COLORS = {
-  primary: '#e11d48', // Red
-  secondary: '#fbbf24', // Yellow
-  accent: '#22c55e', // Green
-  dark: '#000000', // Black
-};
+import { AppSettings, Category, Product, BusinessHours } from './types';
 
 export const ADMIN_PASSWORD = '2707';
+
+const INITIAL_HOURS: BusinessHours[] = [
+  { day: 'Segunda', open: '18:00', close: '23:00', isOpen: true },
+  { day: 'Terça', open: '18:00', close: '23:00', isOpen: true },
+  { day: 'Quarta', open: '18:00', close: '23:00', isOpen: true },
+  { day: 'Quinta', open: '18:00', close: '23:00', isOpen: true },
+  { day: 'Sexta', open: '18:00', close: '00:00', isOpen: true },
+  { day: 'Sábado', open: '18:00', close: '00:00', isOpen: true },
+  { day: 'Domingo', open: '18:00', close: '23:00', isOpen: true },
+];
 
 export const DEFAULT_SETTINGS: AppSettings = {
   storeName: 'Kones Gourmet',
@@ -17,7 +20,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   whatsapp: '64981324434',
   pixKey: '64993075543',
   pixName: 'Silvia Leticia Ferreira - Mercado Pago',
-  deliveryFee: 5.00
+  deliveryFee: 5.00,
+  businessHours: INITIAL_HOURS
 };
 
 export const INITIAL_CATEGORIES: Category[] = [
@@ -38,7 +42,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       { id: 'e1', name: 'Bacon extra', price: 3.50 },
       { id: 'e2', name: 'Dobro de Catupiry', price: 4.00 }
     ],
-    active: true
+    active: true,
+    isDailySuggestion: true
   },
   {
     id: 'p2',
