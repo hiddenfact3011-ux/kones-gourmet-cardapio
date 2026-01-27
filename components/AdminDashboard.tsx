@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, Layout, ShieldAlert, BarChart3, Clock, Eye, EyeOff, Star, TrendingUp, Users, ShoppingBag, Edit3, Image as ImageIcon, RotateCcw, Upload, Layers, DollarSign } from 'lucide-react';
 import { AppSettings, Category, Product, Extra, BusinessHours } from '../types';
-import { ADMIN_PASSWORD } from '../constants';
+import { ADMIN_PASSWORD, DEFAULT_SETTINGS } from '../constants';
 import { supabase } from '../lib/supabase';
 
 interface AdminDashboardProps {
@@ -71,7 +71,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
     else alert('Senha incorreta!');
   };
 
-  // --- CORREÇÃO: ADICIONAR CATEGORIA ---
+  // --- CORREÇÃO ROBUSTA: ADICIONAR CATEGORIA ---
   const handleAddCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) return;
@@ -82,49 +82,63 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
         .insert([{ name }])
         .select();
 
-      if (error) {
-        console.error('Erro detalhado:', error);
-        throw new Error(error.message);
-      }
+      if (error) throw error;
 
       if (data && data.length > 0) {
+        // Atualiza imediatamente a lista local para Silvia ver na hora
         setCategories(prev => [...prev, data[0]]);
         setNewCategoryName('');
-        alert(`Categoria "${name}" adicionada!`);
+        alert(`Categoria "${name}" criada!`);
+      } else {
+        // Fallback: Busca a lista atualizada se o retorno do insert falhar mas o registro existir
+        const { data: list } = await supabase.from('categories').select('*').order('name');
+        if (list) setCategories(list);
+        setNewCategoryName('');
       }
     } catch (err: any) {
-      alert("Erro ao criar categoria: " + err.message);
+      console.error('Erro ao criar categoria:', err);
+      alert("Não foi possível criar agora. Verifique sua internet.");
     } finally {
       setIsSaving(false);
     }
   };
 
   const deleteCategory = async (id: string) => {
-    if (!confirm('Excluir categoria?')) return;
+    if (!confirm('Excluir esta categoria?')) return;
     try {
       const { error } = await supabase.from('categories').delete().eq('id', id);
       if (error) throw error;
       setCategories(prev => prev.filter(c => c.id !== id));
     } catch (err: any) { 
-      alert('Erro ao excluir: ' + err.message); 
+      alert('Erro ao excluir.'); 
     }
   };
 
-  // --- CORREÇÃO: SALVAR CONFIGURAÇÕES (INCLUI HORÁRIOS) ---
+  // --- CORREÇÃO: SALVAR CONFIGURAÇÕES E HORÁRIOS ---
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      // Upsert garante que se já existir o ID 1, ele atualiza. Se não, ele cria.
+      // Força a inclusão dos horários mesmo se estiverem vazios no estado
+      const safeHours = (settings.businessHours && settings.businessHours.length > 0) 
+        ? settings.businessHours 
+        : DEFAULT_SETTINGS.businessHours;
+
+      const finalSettings = {
+        ...settings,
+        businessHours: safeHours
+      };
+
       const { error } = await supabase
         .from('settings')
-        .upsert({ id: 1, data: settings });
+        .upsert({ id: 1, data: finalSettings });
 
       if (error) throw error;
       
+      setSettings(finalSettings);
       alert("Salvo com sucesso!");
     } catch (err: any) {
       console.error('Erro ao salvar:', err);
-      alert("Erro ao gravar no banco de dados: " + err.message);
+      alert("Erro ao gravar dados.");
     } finally {
       setIsSaving(false);
     }
@@ -148,7 +162,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
       setEditingProduct(null);
       alert('Produto atualizado!');
     } catch (err: any) { 
-      alert("Erro ao salvar produto: " + err.message); 
+      alert("Erro ao salvar produto."); 
     } finally { 
       setIsSaving(false); 
     }
@@ -176,6 +190,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
       reader.readAsDataURL(file);
     }
   };
+
+  // Garantir que sempre temos uma lista de horários para renderizar
+  const displayHours = (settings.businessHours && settings.businessHours.length > 0) 
+    ? settings.businessHours 
+    : DEFAULT_SETTINGS.businessHours;
 
   if (!isAdminLoggedIn) {
     return (
@@ -298,24 +317,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
           <div className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-sm space-y-6 animate-slide-in">
              <h3 className="font-black text-gray-900 flex items-center gap-2 text-xl"><Clock className="text-red-600"/> Horários da Silvia</h3>
              <div className="space-y-3">
-                {settings.businessHours?.map((h, i) => (
+                {displayHours.map((h, i) => (
                    <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-200 transition-all">
                       <span className="font-black text-gray-700 w-24 text-sm">{h.day}</span>
                       <div className="flex items-center gap-2">
                          <input type="time" title="Abre" className="bg-white border-2 border-gray-200 rounded-lg p-1.5 text-xs font-black outline-none focus:border-red-600" value={h.open} onChange={e => {
-                            const nh = [...(settings.businessHours || [])];
+                            const nh = [...displayHours];
                             nh[i].open = e.target.value;
                             setSettings(prev => ({...prev, businessHours: nh}));
                          }} />
                          <span className="font-black text-gray-300">-</span>
                          <input type="time" title="Fecha" className="bg-white border-2 border-gray-200 rounded-lg p-1.5 text-xs font-black outline-none focus:border-red-600" value={h.close} onChange={e => {
-                            const nh = [...(settings.businessHours || [])];
+                            const nh = [...displayHours];
                             nh[i].close = e.target.value;
                             setSettings(prev => ({...prev, businessHours: nh}));
                          }} />
                       </div>
                       <button onClick={() => {
-                        const nh = [...(settings.businessHours || [])];
+                        const nh = [...displayHours];
                         nh[i].isOpen = !nh[i].isOpen;
                         setSettings(prev => ({...prev, businessHours: nh}));
                       }} className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all shadow-sm ${h.isOpen ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-red-100 text-red-600 border border-red-200'}`}>

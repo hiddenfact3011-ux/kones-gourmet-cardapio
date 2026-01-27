@@ -42,19 +42,43 @@ const App: React.FC = () => {
     const savedReviews = localStorage.getItem('kones_reviews');
     if (savedReviews) setReviews(JSON.parse(savedReviews));
 
-    const channel = supabase.channel('schema-db-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchData).on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, fetchData).on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchData).subscribe();
+    const channel = supabase.channel('schema-db-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchData)
+      .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
 
   const fetchData = async () => {
     try {
-      const { data: s } = await supabase.from('settings').select('*').eq('id', 1).single();
-      if (s?.data) setSettings(s.data);
-      const { data: c } = await supabase.from('categories').select('*').order('name');
-      if (c && c.length > 0) setCategories(c);
-      const { data: p } = await supabase.from('products').select('*').order('name');
-      if (p && p.length > 0) setProducts(p);
-    } catch (err) { console.warn('Modo offline/demo.'); }
+      // 1. Configurações e Horários
+      const { data: s, error: sErr } = await supabase.from('settings').select('*').eq('id', 1).single();
+      if (s?.data) {
+        setSettings({
+          ...DEFAULT_SETTINGS,
+          ...s.data,
+          businessHours: (s.data.businessHours && s.data.businessHours.length > 0) 
+            ? s.data.businessHours 
+            : DEFAULT_SETTINGS.businessHours
+        });
+      }
+
+      // 2. Categorias (Busca sempre do banco)
+      const { data: c, error: cErr } = await supabase.from('categories').select('*').order('name');
+      if (c && !cErr) {
+         // Se o banco retornou algo (mesmo que vazio), ele manda nos dados de demonstração
+         setCategories(c);
+      }
+
+      // 3. Produtos
+      const { data: p, error: pErr } = await supabase.from('products').select('*').order('name');
+      if (p && !pErr) {
+         setProducts(p);
+      }
+    } catch (err) { 
+      console.warn('Conexão instável ou modo demo.', err); 
+    }
   };
 
   const handleShare = async () => {
@@ -117,7 +141,6 @@ const App: React.FC = () => {
   const handleCheckout = () => {
     const totalPedido = cartTotal + settings.deliveryFee;
     
-    // Registrar venda para o Dashboard
     const savedStats = localStorage.getItem('kones_stats_v2');
     const stats = savedStats ? JSON.parse(savedStats) : { visits: 0, history: [] };
     const newOrder = {
@@ -234,23 +257,6 @@ const App: React.FC = () => {
          </div>
       </div>
 
-      {dailySuggestion && (
-        <div className="px-4 max-w-4xl mx-auto mb-10">
-           <div onClick={() => { setSelectedProduct(dailySuggestion); setSelectedExtrasInModal([]); }} className="bg-gradient-to-r from-zinc-900 to-black rounded-[32px] p-6 shadow-xl text-white flex items-center justify-between gap-6 cursor-pointer hover:scale-[1.01] transition-transform overflow-hidden relative group border border-white/5">
-              <div className="absolute -right-4 -top-4 opacity-10 rotate-12 group-hover:rotate-45 transition-transform"><Sparkles size={160} /></div>
-              <div className="flex-1 space-y-1 relative z-10">
-                 <span className="text-red-500 text-[10px] font-black uppercase tracking-[3px] flex items-center gap-2 mb-1"><div className="w-1 h-1 bg-red-500 rounded-full"></div> Sugestão da Silvia</span>
-                 <h2 className="text-2xl font-black leading-tight">{dailySuggestion.name}</h2>
-                 <p className="text-gray-400 text-xs font-medium leading-relaxed line-clamp-2">{dailySuggestion.description}</p>
-                 <div className="text-2xl font-black pt-2 text-white">R$ {dailySuggestion.price.toFixed(2)}</div>
-              </div>
-              <div className="w-24 h-24 md:w-32 md:h-32 shrink-0 relative z-10">
-                 <img src={dailySuggestion.image} className="w-full h-full object-cover rounded-2xl shadow-2xl border-2 border-white/10" alt="Sugestão" />
-              </div>
-           </div>
-        </div>
-      )}
-
       <div className="sticky top-0 z-40 bg-gray-50/80 backdrop-blur-xl border-b pb-4 pt-2">
         <div className="px-4 max-w-4xl mx-auto space-y-4">
            <div className="relative group">
@@ -299,27 +305,6 @@ const App: React.FC = () => {
             </div>
             <span className="text-xl font-black">R$ {cartTotal.toFixed(2)}</span>
           </button>
-        </div>
-      )}
-
-      {isReviewModalOpen && (
-        <div className="fixed inset-0 z-[300] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4">
-           <div className="bg-white w-full max-w-md rounded-[40px] p-8 animate-slide-in relative">
-              <button onClick={() => setIsReviewModalOpen(false)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full"><X size={20}/></button>
-              <h3 className="text-2xl font-black text-gray-900 mb-2">Avaliar Kones</h3>
-              <div className="space-y-6 mt-8">
-                 <input type="text" placeholder="Seu nome" className="w-full bg-gray-50 p-5 rounded-[24px] outline-none border-2 border-transparent focus:border-red-600 font-bold" value={newReview.name} onChange={e => setNewReview({...newReview, name: e.target.value})} />
-                 <div className="flex gap-2 justify-center">
-                    {[1,2,3,4,5].map(s => (
-                      <button key={s} onClick={() => setNewReview({...newReview, stars: s})}>
-                         <Star size={32} className={s <= newReview.stars ? "text-amber-400 fill-amber-400" : "text-gray-100"} />
-                      </button>
-                    ))}
-                 </div>
-                 <textarea className="w-full bg-gray-50 p-5 rounded-[24px] outline-none border-2 border-transparent focus:border-red-600 font-bold h-32" placeholder="Seu comentário..." value={newReview.comment} onChange={e => setNewReview({...newReview, comment: e.target.value})} />
-                 <button onClick={submitReview} className="w-full bg-red-600 text-white py-5 rounded-[24px] font-black uppercase tracking-widest text-xs">Enviar</button>
-              </div>
-           </div>
         </div>
       )}
 
