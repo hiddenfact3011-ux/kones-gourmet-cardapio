@@ -1,0 +1,7 @@
+{
+  "name": "Kones Gourmet - Cardápio Digital",
+  "description": "Um cardápio digital profissional inspirado no iFood com painel administrativo, pedidos via WhatsApp e gerenciamento completo de produtos.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
