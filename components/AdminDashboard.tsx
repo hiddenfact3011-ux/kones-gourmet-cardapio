@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, PlusCircle, AlertTriangle, Database, Wifi, WifiOff, ExternalLink, Info, Code, Rocket, Eye, Sparkles } from 'lucide-react';
+import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, PlusCircle, AlertTriangle, Database, Wifi, WifiOff, ExternalLink, Info, Code, Rocket, Eye, Sparkles, HelpCircle, Share2, Globe } from 'lucide-react';
 import { AppSettings, Category, Product, Extra } from '../types';
 import { ADMIN_PASSWORD } from '../constants';
 import { supabase } from '../lib/supabase';
@@ -42,7 +42,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   const currentUrl = window.location.origin + window.location.pathname;
-  const isDevelopment = currentUrl.includes('webcontainer') || currentUrl.includes('stackblitz') || currentUrl.includes('localhost');
+  const isDevelopment = currentUrl.includes('webcontainer') || currentUrl.includes('stackblitz') || currentUrl.includes('localhost') || currentUrl.includes('bolt.new');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,10 +148,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  const sqlSetup = `CREATE TABLE IF NOT EXISTS settings (id integer primary key default 1, data jsonb);
-CREATE TABLE IF NOT EXISTS categories (id text primary key, name text not null);
-CREATE TABLE IF NOT EXISTS products (id text primary key, name text not null, description text, price float8, image text, categoryId text references categories(id), extras jsonb default '[]', active boolean default true);`;
-
   if (!isAdminLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
@@ -204,51 +200,48 @@ CREATE TABLE IF NOT EXISTS products (id text primary key, name text not null, de
           <div className="space-y-6 animate-slide-in">
              <div className="p-10 bg-gradient-to-br from-zinc-900 to-black text-white rounded-[48px] shadow-2xl relative overflow-hidden border-2 border-white/5">
                 <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12"><Sparkles size={160} /></div>
-                <h3 className="text-4xl font-black mb-6 flex items-center gap-3"><Sparkles className="text-yellow-400" /> Parabéns, Silvia!</h3>
+                <h3 className="text-4xl font-black mb-6 flex items-center gap-3"><Sparkles className="text-yellow-400" /> Quase lá, Silvia!</h3>
                 
                 <p className="text-zinc-400 font-medium mb-10 leading-relaxed text-lg">
-                  Sua loja <strong>{settings.storeName}</strong> está pronta para dominar o mercado! Agora é só espalhar o seu link oficial por aí.
+                  Se você viu a mensagem <strong>"Nenhuma mudança para fazer commit"</strong>, é porque seu código já está guardado no GitHub. Agora só falta colocar ele na internet!
                 </p>
 
                 <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] space-y-6 relative z-10">
-                   <p className="text-[11px] font-black text-red-500 uppercase tracking-[0.2em]">Seu Link de Vendas Profissional</p>
-                   <div className="flex flex-col md:flex-row gap-4">
-                      <div className="flex-1 bg-black/60 p-5 rounded-[24px] border border-white/10 font-mono text-sm text-zinc-300 overflow-hidden text-ellipsis whitespace-nowrap flex items-center">
-                         {currentUrl}
-                      </div>
-                      <button 
-                        onClick={copyLink} 
-                        className={`px-10 py-5 rounded-[24px] font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-xl ${copied ? 'bg-green-600 text-white' : 'bg-white text-black hover:bg-zinc-200'}`}
-                      >
-                         {copied ? <Check size={24} /> : <Copy size={24}/>}
-                         {copied ? 'Link Copiado!' : 'Copiar Link'}
-                      </button>
+                   <div className="flex items-center gap-4 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl">
+                      <Check className="text-green-500" />
+                      <p className="text-xs font-bold text-green-500 uppercase tracking-widest">Código 100% Salvo no GitHub!</p>
                    </div>
-                   {isDevelopment && (
-                     <div className="flex items-center gap-2 text-amber-500 text-[10px] font-black uppercase mt-4 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
-                        <AlertTriangle size={14}/> Lembrete: Após criar o repositório no GitHub, você terá um link definitivo que nunca muda.
-                     </div>
-                   )}
+
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <a href="https://app.netlify.com/start" target="_blank" className="flex flex-col items-center gap-3 p-6 bg-white rounded-3xl group hover:bg-zinc-100 transition shadow-xl">
+                         <Globe className="text-teal-500" size={40} />
+                         <span className="font-black text-black">Publicar via Netlify</span>
+                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Grátis e Rápido</span>
+                      </a>
+                      <a href="https://vercel.com/new" target="_blank" className="flex flex-col items-center gap-3 p-6 bg-black border border-white/10 rounded-3xl group hover:bg-zinc-800 transition shadow-xl">
+                         <Rocket className="text-white" size={40} />
+                         <span className="font-black text-white">Publicar via Vercel</span>
+                         <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Profissional</span>
+                      </a>
+                   </div>
                 </div>
 
-                <div className="mt-12 flex flex-col md:flex-row gap-4">
-                    <a href={`https://wa.me/?text=${encodeURIComponent('Olá! Confira nosso novo cardápio digital: ' + currentUrl)}`} target="_blank" className="flex-1 bg-green-600 p-5 rounded-[28px] text-center font-black text-sm flex items-center justify-center gap-2 hover:bg-green-700 transition">
-                        Compartilhar no WhatsApp
-                    </a>
-                    <button onClick={onClose} className="flex-1 bg-white/10 p-5 rounded-[28px] text-center font-black text-sm hover:bg-white/20 transition flex items-center justify-center gap-2">
-                        <Eye size={18}/> Visualizar como Cliente
-                    </button>
+                <div className="mt-12 p-6 bg-blue-600/10 border border-blue-500/20 rounded-[30px] flex flex-col md:flex-row items-center gap-6">
+                    <div className="p-4 bg-blue-600 rounded-full"><HelpCircle className="text-white" size={32} /></div>
+                    <div className="flex-1 text-center md:text-left">
+                       <p className="font-black text-lg">Onde estão os botões no GitHub?</p>
+                       <p className="text-xs text-blue-300">Atualize a página do seu repositório no GitHub. Eu acabei de criar um arquivo chamado <strong className="text-white">README.md</strong>. Desça a página e você verá os botões coloridos lá embaixo!</p>
+                    </div>
                 </div>
              </div>
 
-             <div className="p-8 border-2 border-blue-50 bg-blue-50/30 rounded-[40px] space-y-4">
-                <div className="flex items-center gap-3 text-blue-800">
+             <div className="p-8 border-2 border-amber-50 bg-amber-50/30 rounded-[40px] space-y-4">
+                <div className="flex items-center gap-3 text-amber-800">
                    <Info size={28} />
-                   <h3 className="font-black text-xl">Dica de Ouro</h3>
+                   <h3 className="font-black text-xl">Dica de Silvia para Silvia</h3>
                 </div>
-                <p className="text-sm font-medium text-blue-700 leading-relaxed">
-                  Coloque este link no campo <strong>"Site"</strong> do seu perfil do Instagram e mude a sua Bio para algo como: 
-                  <em> "👇 Peça aqui os melhores Kones da região!"</em>. Isso aumenta muito as suas vendas!
+                <p className="text-sm font-medium text-amber-700 leading-relaxed">
+                  Não se preocupe com a mensagem do GitHub. Ela só diz que o código está idêntico ao que você já mandou. Foque agora em clicar no <strong>Netlify</strong> para ganhar seu link <code>.netlify.app</code>!
                 </p>
              </div>
           </div>
