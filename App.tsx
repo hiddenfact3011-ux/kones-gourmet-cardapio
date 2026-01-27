@@ -52,8 +52,8 @@ const App: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      // 1. Configurações e Horários
-      const { data: s, error: sErr } = await supabase.from('settings').select('*').eq('id', 1).single();
+      // 1. Configurações
+      const { data: s } = await supabase.from('settings').select('*').eq('id', 1).single();
       if (s?.data) {
         setSettings({
           ...DEFAULT_SETTINGS,
@@ -64,16 +64,15 @@ const App: React.FC = () => {
         });
       }
 
-      // 2. Categorias (Busca sempre do banco)
-      const { data: c, error: cErr } = await supabase.from('categories').select('*').order('name');
-      if (c && !cErr) {
-         // Se o banco retornou algo (mesmo que vazio), ele manda nos dados de demonstração
+      // 2. Categorias - SÓ atualiza se o banco tiver dados, senão mantém as iniciais
+      const { data: c } = await supabase.from('categories').select('*').order('name');
+      if (c && c.length > 0) {
          setCategories(c);
       }
 
-      // 3. Produtos
-      const { data: p, error: pErr } = await supabase.from('products').select('*').order('name');
-      if (p && !pErr) {
+      // 3. Produtos - SÓ atualiza se o banco tiver dados
+      const { data: p } = await supabase.from('products').select('*').order('name');
+      if (p && p.length > 0) {
          setProducts(p);
       }
     } catch (err) { 

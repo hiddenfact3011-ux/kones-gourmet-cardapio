@@ -84,20 +84,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
-        // Atualiza imediatamente a lista local para Silvia ver na hora
-        setCategories(prev => [...prev, data[0]]);
+      // Busca a lista atualizada do banco para garantir que apareça na tela da Silvia
+      const { data: list } = await supabase.from('categories').select('*').order('name');
+      if (list && list.length > 0) {
+        setCategories(list);
         setNewCategoryName('');
-        alert(`Categoria "${name}" criada!`);
-      } else {
-        // Fallback: Busca a lista atualizada se o retorno do insert falhar mas o registro existir
-        const { data: list } = await supabase.from('categories').select('*').order('name');
-        if (list) setCategories(list);
-        setNewCategoryName('');
+        alert(`Categoria "${name}" criada com sucesso!`);
       }
     } catch (err: any) {
       console.error('Erro ao criar categoria:', err);
-      alert("Não foi possível criar agora. Verifique sua internet.");
+      alert("Erro ao criar categoria. Verifique sua internet.");
     } finally {
       setIsSaving(false);
     }
@@ -114,18 +110,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
     }
   };
 
-  // --- CORREÇÃO: SALVAR CONFIGURAÇÕES E HORÁRIOS ---
+  // --- SALVAR CONFIGURAÇÕES ---
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      // Força a inclusão dos horários mesmo se estiverem vazios no estado
-      const safeHours = (settings.businessHours && settings.businessHours.length > 0) 
-        ? settings.businessHours 
-        : DEFAULT_SETTINGS.businessHours;
-
       const finalSettings = {
         ...settings,
-        businessHours: safeHours
+        businessHours: settings.businessHours || DEFAULT_SETTINGS.businessHours
       };
 
       const { error } = await supabase
@@ -191,7 +182,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
     }
   };
 
-  // Garantir que sempre temos uma lista de horários para renderizar
   const displayHours = (settings.businessHours && settings.businessHours.length > 0) 
     ? settings.businessHours 
     : DEFAULT_SETTINGS.businessHours;
