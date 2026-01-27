@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, Settings, Search, X, Plus, Minus, Trash2, Camera, ChevronRight, Check, MapPin, CreditCard, ChevronLeft, Share2 } from 'lucide-react';
+import { ShoppingCart, Settings, Search, X, Plus, Minus, Trash2, Camera, ChevronRight, Check, MapPin, CreditCard, ChevronLeft, Share2, ArrowRight } from 'lucide-react';
 import { Product, Category, AppSettings, CartItem, View, Extra } from './types';
 import { DEFAULT_SETTINGS, INITIAL_CATEGORIES, INITIAL_PRODUCTS } from './constants';
 import AdminDashboard from './components/AdminDashboard';
@@ -17,6 +17,7 @@ const App: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [cartStep, setCartStep] = useState<'items' | 'checkout'>('items');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedExtrasInModal, setSelectedExtrasInModal] = useState<string[]>([]);
@@ -31,7 +32,6 @@ const App: React.FC = () => {
   useEffect(() => {
     fetchData();
 
-    // Ouvir mudanças em tempo real no Supabase
     const channel = supabase.channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, payload => {
         if (payload.new) setSettings((payload.new as any).data);
@@ -45,15 +45,12 @@ const App: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      // Buscar Configurações
       const { data: s } = await supabase.from('settings').select('*').eq('id', 1).single();
       if (s?.data) setSettings(s.data);
 
-      // Buscar Categorias
       const { data: c } = await supabase.from('categories').select('*').order('name');
       if (c && c.length > 0) setCategories(c);
 
-      // Buscar Produtos
       const { data: p } = await supabase.from('products').select('*').order('name');
       if (p && p.length > 0) setProducts(p);
     } catch (err) {
@@ -131,7 +128,7 @@ const App: React.FC = () => {
 
   const handleCheckout = () => {
     if (!customerInfo.name || !customerInfo.address) {
-      alert('Preencha seu nome e endereço para entrega.');
+      alert('Por favor, preencha seu nome e endereço para que possamos realizar a entrega.');
       return;
     }
     
@@ -191,7 +188,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-24">
-      {/* Top Banner & Actions */}
+      {/* Banner Superior */}
       <div className="relative h-56 md:h-72">
         <img src={settings.banner} alt="Banner" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-start justify-between p-4">
@@ -200,7 +197,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Profile Header */}
+      {/* Cabeçalho do Perfil */}
       <div className="relative px-4 -mt-12 md:-mt-20 mb-8 max-w-4xl mx-auto">
         <div className="bg-white rounded-[40px] shadow-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 border border-gray-100">
           <div className="relative">
@@ -217,7 +214,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Categorias */}
+      {/* Menu de Categorias */}
       <div className="sticky top-0 z-30 bg-gray-50/90 backdrop-blur-2xl border-b overflow-x-auto hide-scrollbar py-4 mb-4">
         <div className="flex gap-3 px-4 max-w-4xl mx-auto">
           <button onClick={() => setSelectedCategory('all')} className={`px-8 py-4 rounded-[20px] text-sm font-black transition-all whitespace-nowrap shadow-sm ${selectedCategory === 'all' ? 'bg-red-600 text-white shadow-xl shadow-red-200 scale-105' : 'bg-white text-gray-400 border border-gray-100'}`}>🔥 Todos</button>
@@ -227,7 +224,7 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Buscar */}
+      {/* Busca */}
       <div className="px-4 max-w-4xl mx-auto mb-8">
         <div className="relative group">
           <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-red-600 transition" />
@@ -268,9 +265,9 @@ const App: React.FC = () => {
       </div>
 
       {/* Botão Flutuante Carrinho */}
-      {cart.length > 0 && (
+      {cart.length > 0 && !isCartOpen && (
         <div className="fixed bottom-8 left-0 right-0 px-6 z-40 max-w-lg mx-auto">
-          <button onClick={() => setIsCartOpen(true)} className="w-full bg-red-600 text-white font-black py-6 rounded-[32px] shadow-2xl flex items-center justify-between px-10 hover:bg-red-700 active:scale-95 transition-all animate-slide-in border-4 border-white/20">
+          <button onClick={() => { setIsCartOpen(true); setCartStep('items'); }} className="w-full bg-red-600 text-white font-black py-6 rounded-[32px] shadow-2xl flex items-center justify-between px-10 hover:bg-red-700 active:scale-95 transition-all animate-slide-in border-4 border-white/20">
             <div className="flex items-center gap-4">
               <div className="bg-white text-red-600 w-9 h-9 rounded-full flex items-center justify-center text-sm shadow-inner">{cart.length}</div>
               <span className="text-xl">Ver Sacola</span>
@@ -296,7 +293,6 @@ const App: React.FC = () => {
                 <div className="text-3xl font-black text-red-600 tracking-tighter pt-2">R$ {selectedProduct.price.toFixed(2)}</div>
               </div>
 
-              {/* ADICIONAIS */}
               {selectedProduct.extras && selectedProduct.extras.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex justify-between items-center bg-gray-50/50 p-5 rounded-[28px] border border-gray-100">
@@ -344,81 +340,112 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Carrinho / Checkout */}
+      {/* Sacola Modal - Versão Melhorada para Mobile */}
       {isCartOpen && (
         <div className="fixed inset-0 z-[200] flex justify-end bg-black/80 backdrop-blur-xl">
-          <div className="bg-white w-full max-w-xl flex flex-col h-full animate-slide-in shadow-2xl border-l-[12px] border-red-600">
+          <div className="bg-white w-full max-w-xl flex flex-col h-full animate-slide-in shadow-2xl md:border-l-[12px] border-red-600">
+            
+            {/* Cabeçalho da Sacola */}
             <div className="p-8 border-b flex items-center justify-between bg-white sticky top-0 z-10">
-              <button onClick={() => setIsCartOpen(false)} className="p-4 bg-gray-100 rounded-[20px] hover:bg-red-600 hover:text-white transition-all active:scale-90"><ChevronLeft size={28} /></button>
-              <h2 className="text-3xl font-black text-gray-900 tracking-tight">Sua Sacola</h2>
-              <button onClick={() => setCart([])} className="text-red-600 font-black text-xs uppercase tracking-widest px-6 py-2 hover:bg-red-50 rounded-full transition-all">Limpar</button>
+              <button onClick={() => { if(cartStep === 'checkout') setCartStep('items'); else setIsCartOpen(false); }} className="p-4 bg-gray-100 rounded-[20px] hover:bg-red-600 hover:text-white transition-all active:scale-90"><ChevronLeft size={28} /></button>
+              <h2 className="text-3xl font-black text-gray-900 tracking-tight">{cartStep === 'items' ? 'Minha Sacola' : 'Entrega'}</h2>
+              <div className="w-14"></div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
-              <div className="space-y-8">
-                {cart.length === 0 ? (
-                  <div className="text-center py-20 space-y-4">
-                     <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-200"><ShoppingCart size={48}/></div>
-                     <p className="font-black text-gray-400">Sua sacola está vazia.</p>
-                     <button onClick={() => setIsCartOpen(false)} className="text-red-600 font-black uppercase text-xs tracking-widest underline">Voltar ao cardápio</button>
-                  </div>
-                ) : cart.map(item => {
-                  const p = products.find(pr => pr.id === item.productId);
-                  const itemExtras = item.selectedExtras?.map(exId => p?.extras?.find(e => e.id === exId)).filter(Boolean) || [];
-                  return p ? (
-                    <div key={item.id} className="flex gap-6 border-b border-gray-50 pb-8 animate-slide-in group">
-                      <img src={p.image} className="w-24 h-24 rounded-[30px] object-cover shadow-xl border-4 border-gray-50" />
-                      <div className="flex-1 space-y-2">
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-black text-xl text-gray-900 leading-tight">{item.quantity}x {p.name}</h4>
-                          <button onClick={() => removeFromCart(item.id)} className="text-gray-200 hover:text-red-600 transition-all p-2"><Trash2 size={22}/></button>
-                        </div>
-                        {itemExtras.length > 0 && (
-                          <div className="flex flex-wrap gap-2">
-                            {itemExtras.map(ex => <span key={ex?.id} className="text-[10px] bg-red-50 text-red-600 px-3 py-1 rounded-full font-black border border-red-100">+{ex?.name}</span>)}
-                          </div>
-                        )}
-                        {item.notes && <p className="text-[11px] text-amber-700 italic bg-amber-50 p-4 rounded-[20px] mt-4 border border-amber-100 font-medium">"{item.notes}"</p>}
-                      </div>
-                    </div>
-                  ) : null;
-                })}
-              </div>
+            {/* Barra de Progresso Estilo iFood */}
+            <div className="flex px-8 py-4 bg-gray-50/50 border-b">
+               <div className="flex-1 flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${cartStep === 'items' ? 'bg-red-600 text-white' : 'bg-green-500 text-white'}`}>{cartStep === 'items' ? '1' : <Check size={14}/>}</div>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${cartStep === 'items' ? 'text-red-600' : 'text-gray-400'}`}>Sacola</span>
+               </div>
+               <div className="w-12 h-[2px] bg-gray-200 self-center mx-2"></div>
+               <div className="flex-1 flex items-center gap-2 opacity-100">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-xs ${cartStep === 'checkout' ? 'bg-red-600 text-white shadow-lg' : 'bg-gray-200 text-gray-400'}`}>2</div>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${cartStep === 'checkout' ? 'text-red-600' : 'text-gray-400'}`}>Dados</span>
+               </div>
+            </div>
 
-              {cart.length > 0 && (
-                <>
-                  {/* Entrega Form */}
-                  <div className="space-y-8 pt-10 border-t border-gray-100">
-                    <h3 className="font-black text-3xl flex items-center gap-3"><MapPin className="text-red-600" /> Onde Entregamos?</h3>
+            {/* Conteúdo Dinâmico */}
+            <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+              
+              {cartStep === 'items' && (
+                <div className="space-y-8">
+                  {cart.length === 0 ? (
+                    <div className="text-center py-20 space-y-4">
+                       <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-200"><ShoppingCart size={48}/></div>
+                       <p className="font-black text-gray-400 text-xl">Sua sacola está vazia.</p>
+                       <button onClick={() => setIsCartOpen(false)} className="text-red-600 font-black uppercase text-sm tracking-widest underline">Voltar ao cardápio</button>
+                    </div>
+                  ) : (
+                    <>
+                      {cart.map(item => {
+                        const p = products.find(pr => pr.id === item.productId);
+                        const itemExtras = item.selectedExtras?.map(exId => p?.extras?.find(e => e.id === exId)).filter(Boolean) || [];
+                        return p ? (
+                          <div key={item.id} className="flex gap-6 border-b border-gray-50 pb-8 animate-slide-in group">
+                            <img src={p.image} className="w-24 h-24 rounded-[30px] object-cover shadow-xl border-4 border-gray-50" />
+                            <div className="flex-1 space-y-2">
+                              <div className="flex justify-between items-start">
+                                <h4 className="font-black text-xl text-gray-900 leading-tight">{item.quantity}x {p.name}</h4>
+                                <button onClick={() => removeFromCart(item.id)} className="text-gray-200 hover:text-red-600 transition-all p-2"><Trash2 size={22}/></button>
+                              </div>
+                              {itemExtras.length > 0 && (
+                                <div className="flex flex-wrap gap-2">
+                                  {itemExtras.map(ex => <span key={ex?.id} className="text-[10px] bg-red-50 text-red-600 px-3 py-1 rounded-full font-black border border-red-100">+{ex?.name}</span>)}
+                                </div>
+                              )}
+                              {item.notes && <p className="text-[11px] text-amber-700 italic bg-amber-50 p-4 rounded-[20px] mt-4 border border-amber-100 font-medium">"{item.notes}"</p>}
+                              <div className="text-red-600 font-black pt-2">R$ {(p.price * item.quantity).toFixed(2)}</div>
+                            </div>
+                          </div>
+                        ) : null;
+                      })}
+                      <button onClick={() => setCart([])} className="w-full py-4 text-gray-400 font-black uppercase text-xs tracking-widest hover:text-red-600 transition-all">Esvaziar Sacola</button>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {cartStep === 'checkout' && (
+                <div className="space-y-10 animate-slide-in">
+                  <div className="space-y-8">
+                    <h3 className="font-black text-3xl flex items-center gap-3 text-gray-900"><MapPin className="text-red-600" size={32} /> Onde Entregamos?</h3>
                     <div className="space-y-5">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 ml-3 uppercase tracking-widest">Seu Nome</label>
-                        <input type="text" placeholder="Ex: Silvia Ferreira" className="w-full bg-gray-50 p-6 rounded-[28px] outline-none border-2 border-transparent focus:border-red-600 font-bold transition-all" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} />
+                        <label className="text-[10px] font-black text-gray-400 ml-3 uppercase tracking-widest">Seu Nome Completo</label>
+                        <input type="text" placeholder="Como devemos te chamar?" className="w-full bg-gray-50 p-6 rounded-[28px] outline-none border-2 border-transparent focus:border-red-600 font-bold transition-all text-lg shadow-inner" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black text-gray-400 ml-3 uppercase tracking-widest">Endereço Completo</label>
-                        <input type="text" placeholder="Rua, Número, Bairro..." className="w-full bg-gray-50 p-6 rounded-[28px] outline-none border-2 border-transparent focus:border-red-600 font-bold transition-all" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} />
+                        <label className="text-[10px] font-black text-gray-400 ml-3 uppercase tracking-widest">Endereço de Entrega</label>
+                        <input type="text" placeholder="Rua, Número, Bairro..." className="w-full bg-gray-50 p-6 rounded-[28px] outline-none border-2 border-transparent focus:border-red-600 font-bold transition-all text-lg shadow-inner" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} />
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-gray-400 ml-3 uppercase tracking-widest">Ponto de Referência</label>
-                        <input type="text" placeholder="Ex: Perto do Supermercado..." className="w-full bg-gray-50 p-6 rounded-[28px] outline-none border-2 border-transparent focus:border-red-600 font-bold transition-all" value={customerInfo.reference} onChange={e => setCustomerInfo({...customerInfo, reference: e.target.value})} />
+                        <input type="text" placeholder="Ex: Próximo à padaria..." className="w-full bg-gray-50 p-6 rounded-[28px] outline-none border-2 border-transparent focus:border-red-600 font-bold transition-all text-lg shadow-inner" value={customerInfo.reference} onChange={e => setCustomerInfo({...customerInfo, reference: e.target.value})} />
                       </div>
                     </div>
                   </div>
 
-                  {/* Pagamento Form */}
                   <div className="space-y-8 pt-10 border-t border-gray-100">
-                    <h3 className="font-black text-3xl flex items-center gap-3"><CreditCard className="text-red-600" /> Pagamento</h3>
+                    <h3 className="font-black text-3xl flex items-center gap-3 text-gray-900"><CreditCard className="text-red-600" size={32} /> Pagamento</h3>
                     <div className="grid grid-cols-2 gap-4">
                       {['Pix', 'Dinheiro', 'Débito', 'Crédito'].map(m => (
                         <button key={m} onClick={() => setCustomerInfo({...customerInfo, paymentMethod: m as any})} className={`p-6 rounded-[28px] border-2 font-black transition-all text-lg shadow-sm ${customerInfo.paymentMethod === m ? 'border-red-600 bg-red-50 text-red-600 scale-95' : 'bg-white text-gray-300 border-gray-50 hover:border-red-100'}`}>{m}</button>
                       ))}
                     </div>
+                    {customerInfo.paymentMethod === 'Pix' && (
+                      <div className="bg-teal-50 p-6 rounded-[28px] border border-teal-100">
+                        <p className="text-teal-800 font-black text-xs uppercase tracking-widest mb-2">Chave Pix da Loja:</p>
+                        <p className="text-teal-900 font-mono font-black text-lg break-all">{settings.pixKey}</p>
+                        <p className="text-teal-600 text-xs font-bold mt-1">{settings.pixName}</p>
+                      </div>
+                    )}
                   </div>
-                </>
+                </div>
               )}
             </div>
 
+            {/* Rodapé Dinâmico - Ação Baseada no Passo */}
             {cart.length > 0 && (
               <div className="p-8 border-t bg-gray-50/50 space-y-6 shadow-inner backdrop-blur-md">
                 <div className="space-y-3">
@@ -430,14 +457,25 @@ const App: React.FC = () => {
                     <span>Taxa de Entrega</span>
                     <span>R$ {settings.deliveryFee.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between font-black text-4xl text-gray-900 pt-4 leading-none">
+                  <div className="flex justify-between font-black text-4xl text-gray-900 pt-2 leading-none">
                     <span>Total</span>
                     <span className="text-red-600 tracking-tighter">R$ {(cartTotal + settings.deliveryFee).toFixed(2)}</span>
                   </div>
                 </div>
-                <button onClick={handleCheckout} className="w-full bg-red-600 text-white font-black py-7 rounded-[35px] shadow-2xl shadow-red-200 text-xl hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-3">
-                  <Check size={28} /> ENVIAR PEDIDO NO WHATSAPP
-                </button>
+
+                {cartStep === 'items' ? (
+                  <button onClick={() => setCartStep('checkout')} className="w-full bg-red-600 text-white font-black py-7 rounded-[35px] shadow-2xl shadow-red-200 text-xl hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-3">
+                    CONTINUAR PARA ENTREGA <ArrowRight size={28} />
+                  </button>
+                ) : (
+                  <button onClick={handleCheckout} className="w-full bg-red-600 text-white font-black py-7 rounded-[35px] shadow-2xl shadow-red-200 text-xl hover:bg-red-700 active:scale-95 transition-all flex items-center justify-center gap-3">
+                    <Check size={28} /> FINALIZAR NO WHATSAPP
+                  </button>
+                )}
+                
+                {cartStep === 'checkout' && (
+                  <button onClick={() => setCartStep('items')} className="w-full py-2 text-gray-400 font-black uppercase text-[10px] tracking-widest hover:text-red-600 transition-all">Voltar para a sacola</button>
+                )}
               </div>
             )}
           </div>
