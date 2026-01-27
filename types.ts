@@ -39,6 +39,7 @@ export interface BusinessHours {
 
 export interface AppSettings {
   storeName: string;
+  storeUrl?: string; // Novo campo para o link oficial
   logo: string;
   banner: string;
   whatsapp: string;

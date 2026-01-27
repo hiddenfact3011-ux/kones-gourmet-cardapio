@@ -15,6 +15,7 @@ const INITIAL_HOURS: BusinessHours[] = [
 
 export const DEFAULT_SETTINGS: AppSettings = {
   storeName: 'Kones Gourmet',
+  storeUrl: '',
   logo: 'https://picsum.photos/200/200?random=1',
   banner: 'https://picsum.photos/800/400?random=2',
   whatsapp: '64981324434',

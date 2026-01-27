@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, Layout, ShieldAlert, BarChart3, Clock, Eye, EyeOff, Star, TrendingUp, Users, ShoppingBag, Edit3, Image as ImageIcon, RotateCcw, Upload, Layers, DollarSign, ExternalLink, Share2 } from 'lucide-react';
+import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, Layout, ShieldAlert, BarChart3, Clock, Eye, EyeOff, Star, TrendingUp, Users, ShoppingBag, Edit3, Image as ImageIcon, RotateCcw, Upload, Layers, DollarSign, ExternalLink, Share2, Info, Link as LinkIcon } from 'lucide-react';
 import { AppSettings, Category, Product, Extra, BusinessHours } from '../types';
 import { ADMIN_PASSWORD, DEFAULT_SETTINGS } from '../constants';
 import { supabase } from '../lib/supabase';
@@ -39,10 +39,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
     if (saved) setStatsData(JSON.parse(saved));
   }, []);
 
+  // Usa o link manual se existir, senão usa o link atual do navegador
+  const officialLink = useMemo(() => {
+    return settings.storeUrl || window.location.origin;
+  }, [settings.storeUrl]);
+
   const copyStoreLink = () => {
-    // Detecta automaticamente a URL que está no navegador agora
-    const url = window.location.origin;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(officialLink);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
   };
@@ -236,7 +239,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
       <main className="p-6 max-w-5xl mx-auto w-full flex-1 pb-32">
         {activeTab === 'dashboard' && (
           <div className="space-y-8 animate-slide-in">
-             {/* Card do Link de Compartilhamento - Agora mais destacado */}
              <div className="bg-ifood p-8 rounded-[40px] text-white shadow-2xl shadow-red-200 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-12 opacity-5 group-hover:scale-110 transition-transform">
                    <Share2 size={120} />
@@ -244,34 +246,48 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                 <div className="relative z-10 space-y-6">
                    <div>
                       <h3 className="text-xl font-black uppercase tracking-widest">Link do seu Cardápio</h3>
-                      <p className="text-sm opacity-90 font-medium">Este é o endereço que você deve enviar para os clientes:</p>
+                      <p className="text-sm opacity-90 font-medium">Envie este link para seus clientes:</p>
                    </div>
                    <div className="flex flex-col gap-4">
                       <div className="bg-white/20 backdrop-blur-xl rounded-[24px] p-6 font-black text-lg break-all text-center border border-white/30">
-                         {window.location.origin}
+                         {officialLink}
                       </div>
-                      <button 
-                        onClick={copyStoreLink}
-                        className="bg-white text-ifood font-black px-8 py-5 rounded-[24px] flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl"
-                      >
-                         {linkCopied ? <Check size={24} strokeWidth={3}/> : <Copy size={24} strokeWidth={3}/>}
-                         {linkCopied ? 'COPIADO COM SUCESSO!' : 'COPIAR LINK PARA WHATSAPP'}
-                      </button>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button 
+                          onClick={copyStoreLink}
+                          className="bg-white text-ifood font-black px-8 py-5 rounded-[24px] flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl"
+                        >
+                          {linkCopied ? <Check size={24} strokeWidth={3}/> : <Copy size={24} strokeWidth={3}/>}
+                          {linkCopied ? 'COPIADO!' : 'COPIAR LINK'}
+                        </button>
+                        <button 
+                          onClick={() => window.open(officialLink, '_blank')}
+                          className="bg-zinc-900 text-white font-black px-8 py-5 rounded-[24px] flex items-center justify-center gap-3 hover:scale-105 active:scale-95 transition-all shadow-xl"
+                        >
+                          <ExternalLink size={24} /> TESTAR LINK
+                        </button>
+                      </div>
                    </div>
+                   {!settings.storeUrl && (
+                     <div className="bg-black/20 p-4 rounded-2xl flex gap-3 items-center">
+                        <Info size={20} className="shrink-0" />
+                        <p className="text-[10px] font-bold leading-relaxed">DICA: Se este não for o link correto, vá na aba "DESIGN" e digite o seu link oficial da Cloudflare!</p>
+                     </div>
+                   )}
                 </div>
              </div>
 
              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-black text-gray-900">Desempenho Atual</h2>
-                <button onClick={resetStats} className="text-xs font-black text-red-600 bg-red-50 px-4 py-2 rounded-xl">LIMPAR DADOS</button>
+                <h2 className="text-2xl font-black text-gray-900">Estatísticas</h2>
+                <button onClick={resetStats} className="text-xs font-black text-red-600 bg-red-50 px-4 py-2 rounded-xl">ZERAR</button>
              </div>
              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
-                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">Vendas Hoje</p>
+                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">Vendas</p>
                    <p className="text-2xl font-black text-gray-900">R$ {dashboardStats.salesToday.toFixed(2)}</p>
                 </div>
                 <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
-                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">Pedidos Hoje</p>
+                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">Pedidos</p>
                    <p className="text-2xl font-black text-gray-900">{dashboardStats.ordersToday}</p>
                 </div>
                 <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
@@ -279,20 +295,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                    <p className="text-2xl font-black text-gray-900">{dashboardStats.visits}</p>
                 </div>
                 <div className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm">
-                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">Destaque</p>
+                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-4">Top Item</p>
                    <p className="text-sm font-black text-gray-900 truncate">{dashboardStats.topProduct?.name || '---'}</p>
                 </div>
              </div>
           </div>
         )}
 
-        {/* Outras abas permanecem iguais */}
+        {/* ... categorias e produtos ... */}
         {activeTab === 'categories' && (
            <div className="space-y-8 animate-slide-in">
               <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm">
-                 <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2"><Layers className="text-red-600"/> Gerenciar Categorias</h3>
+                 <h3 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2"><Layers className="text-red-600"/> Categorias</h3>
                  <div className="flex gap-2 mb-10">
-                    <input type="text" placeholder="Ex: Bebidas, Sobremesas..." className="flex-1 p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[24px] outline-none font-bold" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
+                    <input type="text" placeholder="Nome" className="flex-1 p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[24px] outline-none font-bold" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
                     <button onClick={handleAddCategory} disabled={isSaving || !newCategoryName.trim()} className="bg-red-600 text-white px-8 rounded-[24px] font-black text-xs uppercase disabled:opacity-50">
                       {isSaving ? '...' : 'ADD'}
                     </button>
@@ -322,7 +338,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
            </div>
         )}
 
-        {/* Produtos, Horários e Design permanecem como estão */}
         {activeTab === 'products' && (
            <div className="space-y-6 animate-slide-in">
               <div className="flex justify-between items-center">
@@ -349,8 +364,165 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
               </div>
            </div>
         )}
+
+        {activeTab === 'hours' && (
+          <div className="bg-white rounded-[40px] p-8 border border-gray-100 shadow-sm space-y-6 animate-slide-in">
+             <h3 className="font-black text-gray-900 flex items-center gap-2 text-xl"><Clock className="text-red-600"/> Horários</h3>
+             <div className="space-y-3">
+                {displayHours.map((h, i) => (
+                   <div key={i} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-200 transition-all">
+                      <span className="font-black text-gray-700 w-24 text-sm">{h.day}</span>
+                      <div className="flex items-center gap-2">
+                         <input type="time" title="Abre" className="bg-white border-2 border-gray-200 rounded-lg p-1.5 text-xs font-black outline-none focus:border-red-600" value={h.open} onChange={e => {
+                            const nh = [...displayHours];
+                            nh[i].open = e.target.value;
+                            setSettings(prev => ({...prev, businessHours: nh}));
+                         }} />
+                         <span className="font-black text-gray-300">-</span>
+                         <input type="time" title="Fecha" className="bg-white border-2 border-gray-200 rounded-lg p-1.5 text-xs font-black outline-none focus:border-red-600" value={h.close} onChange={e => {
+                            const nh = [...displayHours];
+                            nh[i].close = e.target.value;
+                            setSettings(prev => ({...prev, businessHours: nh}));
+                         }} />
+                      </div>
+                      <button onClick={() => {
+                        const nh = [...displayHours];
+                        nh[i].isOpen = !nh[i].isOpen;
+                        setSettings(prev => ({...prev, businessHours: nh}));
+                      }} className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all shadow-sm ${h.isOpen ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-red-100 text-red-600 border border-red-200'}`}>
+                        {h.isOpen ? 'ABERTO' : 'FECHADO'}
+                      </button>
+                   </div>
+                ))}
+             </div>
+             <button onClick={handleSaveSettings} disabled={isSaving} className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest mt-4 hover:bg-black transition-all shadow-xl disabled:opacity-50">
+               {isSaving ? 'SALVANDO...' : 'SALVAR HORÁRIOS'}
+             </button>
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+           <div className="space-y-8 animate-slide-in">
+              <div className="bg-white p-8 rounded-[40px] border border-gray-100 shadow-sm space-y-8">
+                 <h3 className="text-xl font-black text-gray-900 flex items-center gap-2"><Layout className="text-red-600"/> Configurações Principais</h3>
+                 
+                 {/* Novo campo de Link Oficial */}
+                 <div className="bg-gray-50 p-6 rounded-[32px] border-2 border-dashed border-gray-200 space-y-4">
+                    <div className="flex items-center gap-2 text-ifood font-black uppercase text-xs tracking-widest">
+                       <LinkIcon size={16} /> Link Oficial da Loja
+                    </div>
+                    <p className="text-[10px] text-gray-500 font-medium">Digite aqui o link oficial (ex: kones-gourmet.pages.dev) para que os botões de compartilhar funcionem corretamente!</p>
+                    <input 
+                      type="text" 
+                      placeholder="https://seu-projeto.pages.dev" 
+                      className="w-full p-5 bg-white border-2 border-gray-200 focus:border-red-600 rounded-[24px] outline-none font-bold text-sm" 
+                      value={settings.storeUrl || ''} 
+                      onChange={e => setSettings(prev => ({...prev, storeUrl: e.target.value}))} 
+                    />
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                    <div className="flex flex-col items-center gap-4">
+                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Logo</p>
+                       <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-gray-50 relative group bg-gray-100 shadow-inner">
+                          <img src={settings.logo} className="w-full h-full object-cover" alt="Preview Logo" />
+                          <button onClick={() => logoInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"><Camera size={32}/></button>
+                       </div>
+                       <input type="file" hidden ref={logoInputRef} accept="image/*" onChange={(e) => handleFileUpload(e, 'logo')} />
+                    </div>
+                    <div className="flex flex-col items-center gap-4">
+                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Banner</p>
+                       <div className="w-full h-32 rounded-[28px] overflow-hidden border-4 border-gray-50 relative group bg-gray-100 shadow-inner">
+                          <img src={settings.banner} className="w-full h-full object-cover" alt="Preview Banner" />
+                          <button onClick={() => bannerInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white"><Camera size={32}/></button>
+                       </div>
+                       <input type="file" hidden ref={bannerInputRef} accept="image/*" onChange={(e) => handleFileUpload(e, 'banner')} />
+                    </div>
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8 border-t">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">Taxa de Entrega (R$)</label>
+                       <div className="relative">
+                          <DollarSign className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300" size={18}/>
+                          <input type="number" step="0.50" className="w-full pl-12 pr-6 py-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[28px] outline-none font-bold" value={settings.deliveryFee} onChange={e => setSettings(prev => ({...prev, deliveryFee: Number(e.target.value)}))} />
+                       </div>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4">WhatsApp (Só números)</label>
+                       <input type="text" className="w-full p-5 bg-gray-50 border-2 border-transparent focus:border-red-600 rounded-[28px] outline-none font-bold" value={settings.whatsapp} onChange={e => setSettings(prev => ({...prev, whatsapp: e.target.value}))} />
+                    </div>
+                 </div>
+              </div>
+              <button disabled={isSaving} onClick={handleSaveSettings} className="w-full bg-red-600 text-white py-6 rounded-[32px] font-black shadow-xl shadow-red-100 uppercase tracking-widest hover:bg-red-700 transition-all">
+                {isSaving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+              </button>
+           </div>
+        )}
       </main>
-      {/* ... restante do código de modais ... */}
+
+      {editingProduct && (
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+           <div className="bg-white w-full max-w-2xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-slide-in">
+              <div className="p-8 border-b flex justify-between items-center bg-gray-50">
+                 <h3 className="text-2xl font-black text-gray-900">{editingProduct.id.startsWith('temp-') ? 'Novo' : 'Editar'}</h3>
+                 <button onClick={() => setEditingProduct(null)} className="p-2 bg-white rounded-xl shadow-sm"><X/></button>
+              </div>
+              <form onSubmit={handleProductSubmit} className="p-8 overflow-y-auto space-y-6 custom-scrollbar">
+                 <div className="flex flex-col items-center gap-4 border-b pb-6">
+                    <div onClick={() => fileInputRef.current?.click()} className="w-48 h-48 rounded-[32px] overflow-hidden border-4 border-white shadow-2xl bg-gray-50 relative group cursor-pointer">
+                       <img src={editingProduct.image || 'https://via.placeholder.com/300?text=Sem+Foto'} className="w-full h-full object-cover" alt="Produto" />
+                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Upload size={40} className="text-white"/></div>
+                    </div>
+                    <input type="file" hidden ref={fileInputRef} accept="image/*" onChange={(e) => handleFileUpload(e, 'product')} />
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <input type="text" required placeholder="Nome" className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-red-600 outline-none font-bold" value={editingProduct.name} onChange={e => setEditingProduct({...editingProduct, name: e.target.value})} />
+                    <input type="number" step="0.01" required placeholder="Preço" className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-red-600 outline-none font-bold" value={editingProduct.price} onChange={e => setEditingProduct({...editingProduct, price: Number(e.target.value)})} />
+                 </div>
+                 <textarea placeholder="Descrição" className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-red-600 outline-none font-medium h-24" value={editingProduct.description} onChange={e => setEditingProduct({...editingProduct, description: e.target.value})} />
+                 <select className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-red-600 outline-none font-bold" value={editingProduct.categoryId} onChange={e => setEditingProduct({...editingProduct, categoryId: e.target.value})}>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                 </select>
+                 <div className="space-y-4 pt-4 border-t">
+                    <div className="flex justify-between items-center">
+                       <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Extras deste Produto</h4>
+                       <button type="button" onClick={() => setEditingProduct({...editingProduct, extras: [...editingProduct.extras, { id: Math.random().toString(36).substr(2, 9), name: '', price: 0 }]})} className="text-red-600 font-black text-[10px] border border-red-200 px-3 py-1 rounded-full">+ ADD EXTRA</button>
+                    </div>
+                    <div className="space-y-2">
+                       {editingProduct.extras.map((ex, idx) => (
+                         <div key={ex.id} className="flex gap-2">
+                            <input type="text" placeholder="Nome" className="flex-1 p-3 bg-gray-50 rounded-xl outline-none font-bold text-xs" value={ex.name} onChange={e => {
+                               const ne = [...editingProduct.extras];
+                               ne[idx].name = e.target.value;
+                               setEditingProduct({...editingProduct, extras: ne});
+                            }} />
+                            <input type="number" step="0.01" placeholder="R$" className="w-24 p-3 bg-gray-50 rounded-xl outline-none font-bold text-xs" value={ex.price} onChange={e => {
+                               const ne = [...editingProduct.extras];
+                               ne[idx].price = Number(e.target.value);
+                               setEditingProduct({...editingProduct, extras: ne});
+                            }} />
+                            <button type="button" onClick={() => setEditingProduct({...editingProduct, extras: editingProduct.extras.filter((_, i) => i !== idx)})} className="p-3 text-red-300 hover:text-red-600 transition-colors"><Trash2 size={16}/></button>
+                         </div>
+                       ))}
+                    </div>
+                 </div>
+                 <div className="flex gap-4 pt-4 border-t">
+                    <label className="flex-1 flex items-center justify-center gap-3 p-4 bg-gray-50 rounded-2xl cursor-pointer">
+                       <input type="checkbox" className="w-6 h-6 rounded-lg text-red-600" checked={editingProduct.active} onChange={e => setEditingProduct({...editingProduct, active: e.target.checked})} />
+                       <span className="font-black text-xs uppercase tracking-widest text-gray-600">Disponível</span>
+                    </label>
+                    <label className="flex-1 flex items-center justify-center gap-3 p-4 bg-gray-50 rounded-2xl cursor-pointer">
+                       <input type="checkbox" className="w-6 h-6 rounded-lg text-amber-500" checked={editingProduct.isDailySuggestion} onChange={e => setEditingProduct({...editingProduct, isDailySuggestion: e.target.checked})} />
+                       <span className="font-black text-xs uppercase tracking-widest text-gray-600">Sugestão</span>
+                    </label>
+                 </div>
+              </form>
+              <div className="p-8 border-t bg-gray-50">
+                 <button type="submit" disabled={isSaving} onClick={handleProductSubmit} className="w-full bg-red-600 text-white py-5 rounded-[28px] font-black shadow-xl uppercase tracking-widest">SALVAR PRODUTO</button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
