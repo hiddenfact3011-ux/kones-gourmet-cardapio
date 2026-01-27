@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { X, Save, Plus, Trash2, Camera, ArrowLeft, Settings as SettingsIcon, Tag, Package, Copy, Check, Layout, ShieldAlert, BarChart3, Clock, Eye, EyeOff, Star, TrendingUp, Users, ShoppingBag, Edit3, Image as ImageIcon, RotateCcw, Upload, Layers, DollarSign } from 'lucide-react';
-import { AppSettings, Category, Product, Extra } from '../types';
+import { AppSettings, Category, Product, Extra, BusinessHours } from '../types';
 import { ADMIN_PASSWORD } from '../constants';
 import { supabase } from '../lib/supabase';
 
@@ -71,44 +71,63 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
     else alert('Senha incorreta!');
   };
 
+  // --- CORREÇÃO: ADICIONAR CATEGORIA ---
   const handleAddCategory = async () => {
     const name = newCategoryName.trim();
     if (!name) return;
     setIsSaving(true);
     try {
-      const { data, error } = await supabase.from('categories').insert([{ name }]).select();
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('categories')
+        .insert([{ name }])
+        .select();
+
+      if (error) {
+        console.error('Erro detalhado:', error);
+        throw new Error(error.message);
+      }
+
       if (data && data.length > 0) {
         setCategories(prev => [...prev, data[0]]);
         setNewCategoryName('');
-        alert('Categoria "' + name + '" criada com sucesso!');
+        alert(`Categoria "${name}" adicionada!`);
       }
-    } catch (err) { 
-      console.error('Erro ao salvar categoria:', err);
-      alert('Erro ao salvar categoria. Verifique sua conexão.'); 
-    } finally { setIsSaving(false); }
+    } catch (err: any) {
+      alert("Erro ao criar categoria: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const deleteCategory = async (id: string) => {
-    if (!confirm('Excluir categoria? Todos os produtos desta categoria continuarão existindo, mas sem categoria definida.')) return;
+    if (!confirm('Excluir categoria?')) return;
     try {
       const { error } = await supabase.from('categories').delete().eq('id', id);
       if (error) throw error;
       setCategories(prev => prev.filter(c => c.id !== id));
-    } catch (err) { alert('Erro ao excluir categoria.'); }
+    } catch (err: any) { 
+      alert('Erro ao excluir: ' + err.message); 
+    }
   };
 
-  const saveSettings = async (currentSettings: AppSettings) => {
+  // --- CORREÇÃO: SALVAR CONFIGURAÇÕES (INCLUI HORÁRIOS) ---
+  const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      const { error } = await supabase.from('settings').upsert({ id: 1, data: currentSettings });
+      // Upsert garante que se já existir o ID 1, ele atualiza. Se não, ele cria.
+      const { error } = await supabase
+        .from('settings')
+        .upsert({ id: 1, data: settings });
+
       if (error) throw error;
-      setSettings(currentSettings);
-      alert("Configurações salvas com sucesso!");
-    } catch (err) { 
-      console.error('Erro ao salvar settings:', err);
-      alert("Erro ao salvar no banco de dados."); 
-    } finally { setIsSaving(false); }
+      
+      alert("Salvo com sucesso!");
+    } catch (err: any) {
+      console.error('Erro ao salvar:', err);
+      alert("Erro ao gravar no banco de dados: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleProductSubmit = async (e: React.FormEvent) => {
@@ -127,12 +146,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
         setProducts(prev => prev.map(p => p.id === editingProduct.id ? editingProduct : p));
       }
       setEditingProduct(null);
-      alert('Produto salvo com sucesso!');
-    } catch (err) { alert("Erro ao salvar produto."); } finally { setIsSaving(false); }
+      alert('Produto atualizado!');
+    } catch (err: any) { 
+      alert("Erro ao salvar produto: " + err.message); 
+    } finally { 
+      setIsSaving(false); 
+    }
   };
 
   const deleteProduct = async (id: string) => {
-    if (!confirm('Excluir este produto permanentemente?')) return;
+    if (!confirm('Excluir este produto?')) return;
     try {
       const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;
@@ -157,7 +180,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
   if (!isAdminLoggedIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4">
-        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-w-md text-center border-t-[12px] border-red-600">
+        <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full max-md text-center border-t-[12px] border-red-600">
           <SettingsIcon size={48} className="mx-auto text-red-600 mb-6"/>
           <h2 className="text-3xl font-black mb-8 text-gray-900">Painel Silvia</h2>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -280,28 +303,28 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                       <span className="font-black text-gray-700 w-24 text-sm">{h.day}</span>
                       <div className="flex items-center gap-2">
                          <input type="time" title="Abre" className="bg-white border-2 border-gray-200 rounded-lg p-1.5 text-xs font-black outline-none focus:border-red-600" value={h.open} onChange={e => {
-                            const nh = [...settings.businessHours!];
+                            const nh = [...(settings.businessHours || [])];
                             nh[i].open = e.target.value;
                             setSettings(prev => ({...prev, businessHours: nh}));
                          }} />
                          <span className="font-black text-gray-300">-</span>
                          <input type="time" title="Fecha" className="bg-white border-2 border-gray-200 rounded-lg p-1.5 text-xs font-black outline-none focus:border-red-600" value={h.close} onChange={e => {
-                            const nh = [...settings.businessHours!];
+                            const nh = [...(settings.businessHours || [])];
                             nh[i].close = e.target.value;
                             setSettings(prev => ({...prev, businessHours: nh}));
                          }} />
                       </div>
                       <button onClick={() => {
-                        const newHours = [...settings.businessHours!];
-                        newHours[i].isOpen = !newHours[i].isOpen;
-                        setSettings(prev => ({...prev, businessHours: newHours}));
+                        const nh = [...(settings.businessHours || [])];
+                        nh[i].isOpen = !nh[i].isOpen;
+                        setSettings(prev => ({...prev, businessHours: nh}));
                       }} className={`px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all shadow-sm ${h.isOpen ? 'bg-green-100 text-green-600 border border-green-200' : 'bg-red-100 text-red-600 border border-red-200'}`}>
                         {h.isOpen ? 'ABERTO' : 'FECHADO'}
                       </button>
                    </div>
                 ))}
              </div>
-             <button onClick={() => saveSettings(settings)} disabled={isSaving} className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest mt-4 hover:bg-black transition-all shadow-xl disabled:opacity-50">
+             <button onClick={handleSaveSettings} disabled={isSaving} className="w-full bg-zinc-900 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-widest mt-4 hover:bg-black transition-all shadow-xl disabled:opacity-50">
                {isSaving ? 'SALVANDO...' : 'SALVAR HORÁRIOS'}
              </button>
           </div>
@@ -344,7 +367,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ settings, setSettings, 
                     </div>
                  </div>
               </div>
-              <button disabled={isSaving} onClick={() => saveSettings(settings)} className="w-full bg-red-600 text-white py-6 rounded-[32px] font-black shadow-xl shadow-red-100 uppercase tracking-widest hover:bg-red-700 transition-all">
+              <button disabled={isSaving} onClick={handleSaveSettings} className="w-full bg-red-600 text-white py-6 rounded-[32px] font-black shadow-xl shadow-red-100 uppercase tracking-widest hover:bg-red-700 transition-all">
                 {isSaving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
               </button>
            </div>
