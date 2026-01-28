@@ -48,17 +48,18 @@ const App: React.FC = () => {
   }, 0);
 
   const handleShare = async () => {
+    const shareUrl = 'https://kones-gourmet-cardapio.vercel.app';
     const shareData = {
       title: settings.storeName,
       text: `Confira o cardápio da ${settings.storeName}!`,
-      url: window.location.href,
+      url: shareUrl,
     };
 
     try {
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareUrl);
         alert('Link copiado para a área de transferência!');
       }
     } catch (err) {

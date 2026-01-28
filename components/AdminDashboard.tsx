@@ -9,6 +9,7 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
   const [pass, setPass] = useState('');
   const [tab, setTab] = useState('sales');
   const [loading, setLoading] = useState(false);
+  const OFFICIAL_URL = 'https://kones-gourmet-cardapio.vercel.app';
 
   const save = async (table: string, data: any) => {
     setLoading(true);
@@ -32,7 +33,7 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
   };
 
   const copyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    navigator.clipboard.writeText(OFFICIAL_URL);
     alert("Link do cardápio copiado!");
   };
 
@@ -94,7 +95,7 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
             <div className="bg-red-600 p-8 rounded-[40px] shadow-xl text-white space-y-4">
                <h3 className="font-black flex items-center gap-2 uppercase tracking-widest text-xs"><Link size={18}/> Seu Link do Cardápio</h3>
                <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl flex justify-between items-center gap-4">
-                 <p className="text-xs font-bold truncate opacity-80">{window.location.href}</p>
+                 <p className="text-xs font-bold truncate opacity-80">{OFFICIAL_URL}</p>
                  <button onClick={copyLink} className="bg-white text-red-600 p-2 rounded-xl shadow-lg hover:scale-105 transition active:scale-95"><Copy size={18}/></button>
                </div>
                <p className="text-[10px] font-medium opacity-70">Silvia, este é o link que você deve enviar para seus clientes!</p>
