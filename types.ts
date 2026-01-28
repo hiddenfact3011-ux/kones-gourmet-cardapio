@@ -14,22 +14,17 @@ export interface Product {
   categoryId: string;
   extras: Extra[];
   active: boolean;
-  isDailySuggestion?: boolean;
 }
 
 export interface Category {
   id: string;
   name: string;
+  globalExtras?: Extra[];
 }
 
-export interface Review {
-  id: string;
-  customerName: string;
-  stars: number;
-  comment: string;
-  date: string;
-}
-
+/**
+ * Interface representing business operating hours for a specific day.
+ */
 export interface BusinessHours {
   day: string;
   open: string;
@@ -39,7 +34,6 @@ export interface BusinessHours {
 
 export interface AppSettings {
   storeName: string;
-  storeUrl?: string; // Novo campo para o link oficial
   logo: string;
   banner: string;
   whatsapp: string;
@@ -47,7 +41,6 @@ export interface AppSettings {
   pixName: string;
   deliveryFee: number;
   businessHours?: BusinessHours[];
-  dailySuggestionId?: string;
 }
 
 export interface CartItem {

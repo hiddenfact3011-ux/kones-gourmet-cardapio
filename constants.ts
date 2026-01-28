@@ -15,58 +15,28 @@ const INITIAL_HOURS: BusinessHours[] = [
 
 export const DEFAULT_SETTINGS: AppSettings = {
   storeName: 'Kones Gourmet',
-  storeUrl: '',
-  logo: 'https://picsum.photos/200/200?random=1',
-  banner: 'https://picsum.photos/800/400?random=2',
+  logo: 'https://images.unsplash.com/photo-1613564834361-9436948817d1?w=200',
+  banner: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800',
   whatsapp: '64981324434',
   pixKey: '64993075543',
-  pixName: 'Silvia Leticia Ferreira - Mercado Pago',
+  pixName: 'Silvia Leticia Ferreira',
   deliveryFee: 5.00,
   businessHours: INITIAL_HOURS
 };
 
 export const INITIAL_CATEGORIES: Category[] = [
   { id: '1', name: 'Kones Salgados' },
-  { id: '2', name: 'Kones Doces' },
-  { id: '3', name: 'Bebidas' },
-  { id: '4', name: 'Combos' },
-  { id: '5', name: 'Porções' },
-  { id: '6', name: 'Adicionais' },
-  { id: '7', name: 'Promoções' }
+  { id: '2', name: 'Kones Doces' }
 ];
 
 export const INITIAL_PRODUCTS: Product[] = [
   {
     id: 'p1',
-    name: 'Kone de Frango com Catupiry',
-    description: 'Massa crocante recheada com frango desfiado temperado e o legítimo catupiry.',
+    name: 'Kone de Frango',
+    description: 'Frango desfiado com catupiry.',
     price: 18.50,
-    image: 'https://picsum.photos/400/400?random=10',
+    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400',
     categoryId: '1',
-    extras: [
-      { id: 'e1', name: 'Bacon extra', price: 3.50 },
-      { id: 'e2', name: 'Dobro de Catupiry', price: 4.00 }
-    ],
-    active: true,
-    isDailySuggestion: true
-  },
-  {
-    id: 'p2',
-    name: 'Kone de Nutella com Morango',
-    description: 'A combinação perfeita de creme de avelã e morangos frescos.',
-    price: 22.00,
-    image: 'https://picsum.photos/400/400?random=11',
-    categoryId: '2',
-    extras: [],
-    active: true
-  },
-  {
-    id: 'p3',
-    name: 'Coca-Cola 350ml',
-    description: 'Geladinha para acompanhar.',
-    price: 6.00,
-    image: 'https://picsum.photos/400/400?random=12',
-    categoryId: '3',
     extras: [],
     active: true
   }
