@@ -37,14 +37,24 @@ const App: React.FC = () => {
     load();
   }, []);
 
+  // CÁLCULO TOTAL CORRIGIDO (Considera Itens Normais + Promoção + Adicionais)
   const total = cart.reduce((acc, item) => {
-    const p = products.find(prod => prod.id === item.productId);
-    if (!p) return acc;
-    const extrasPrice = item.selectedExtras.reduce((sum, id) => {
-      const ex = p.extras.find(e => e.id === id);
-      return sum + (ex?.price || 0);
-    }, 0);
-    return acc + (p.price + extrasPrice) * item.quantity;
+    let itemBasePrice = 0;
+    let extrasPrice = 0;
+
+    if (item.productId === 'promo-item') {
+      itemBasePrice = settings.promotion?.price || 0;
+    } else {
+      const p = products.find(prod => prod.id === item.productId);
+      if (!p) return acc;
+      itemBasePrice = p.price;
+      extrasPrice = item.selectedExtras.reduce((sum, id) => {
+        const ex = p.extras.find(e => e.id === id);
+        return sum + (ex?.price || 0);
+      }, 0);
+    }
+    
+    return acc + (itemBasePrice + extrasPrice) * item.quantity;
   }, 0);
 
   const handleShare = async () => {
@@ -83,13 +93,32 @@ const App: React.FC = () => {
     message += `\n*ITENS:*\n`;
 
     cart.forEach(item => {
-      const p = products.find(prod => prod.id === item.productId);
+      let p: any = null;
+      if (item.productId === 'promo-item') {
+        p = {
+          name: settings.promotion?.name || 'Promoção do Dia',
+          price: settings.promotion?.price || 0,
+          extras: []
+        };
+      } else {
+        p = products.find(prod => prod.id === item.productId);
+      }
+
       if (p) {
-        message += `• ${item.quantity}x ${p.name} (R$ ${p.price.toFixed(2)})\n`;
+        const itemExtrasPrice = item.selectedExtras.reduce((sum, exId) => {
+          const ex = p.extras?.find((e: any) => e.id === exId);
+          return sum + (ex?.price || 0);
+        }, 0);
+        
+        const itemTotalIndividual = p.price + itemExtrasPrice;
+
+        message += `• ${item.quantity}x ${p.name} (R$ ${itemTotalIndividual.toFixed(2)})\n`;
+        
         item.selectedExtras.forEach(exId => {
-          const ex = p.extras.find(e => e.id === exId);
+          const ex = p.extras?.find((e: any) => e.id === exId);
           if (ex) message += `  + ${ex.name} (R$ ${ex.price.toFixed(2)})\n`;
         });
+        
         if (item.notes) message += `  _Obs: ${item.notes}_\n`;
       }
     });
@@ -257,25 +286,30 @@ const App: React.FC = () => {
             <div className="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
               <div className="space-y-4">
                 {cart.map((item, idx) => {
-                  const p = products.find(prod => prod.id === item.productId) || (item.productId === 'promo-item' ? { name: item.productId, price: total / item.quantity, extras: [] } : null);
-                  const itemName = item.productId === 'promo-item' ? cart[idx].notes.includes('Promo') ? 'Promoção do Dia' : products.find(prod => prod.id === item.productId)?.name || 'Item' : products.find(prod => prod.id === item.productId)?.name;
-                  const itemPrice = item.productId === 'promo-item' ? settings.promotion?.price || 0 : products.find(prod => prod.id === item.productId)?.price || 0;
+                  const p = item.productId === 'promo-item' 
+                    ? { name: settings.promotion?.name || 'Promoção do Dia', price: settings.promotion?.price || 0, extras: [] }
+                    : products.find(prod => prod.id === item.productId);
 
-                  return p ? (
+                  if (!p) return null;
+                  
+                  const extrasTotal = item.selectedExtras.reduce((s, id) => s + (p.extras?.find((e: any) => e.id === id)?.price || 0), 0);
+                  const itemFinalPrice = (p.price + extrasTotal) * item.quantity;
+
+                  return (
                     <div key={item.id} className="flex justify-between items-start border-b border-gray-100 pb-4">
                       <div className="flex-1">
                         <p className="font-bold text-gray-800">{item.quantity}x {p.name}</p>
                         <p className="text-[10px] text-gray-400 italic">
-                          {item.selectedExtras.map(id => p.extras?.find(e => e.id === id)?.name).filter(Boolean).join(', ')}
+                          {item.selectedExtras.map(id => p.extras?.find((e: any) => e.id === id)?.name).filter(Boolean).join(', ')}
                           {item.notes && ` | Obs: ${item.notes}`}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-black text-sm text-red-600">R$ {(itemPrice + item.selectedExtras.reduce((s, id) => s + (p.extras?.find(e => e.id === id)?.price || 0), 0)).toFixed(2)}</p>
+                        <p className="font-black text-sm text-red-600">R$ {itemFinalPrice.toFixed(2)}</p>
                         <button onClick={() => setCart(cart.filter((_, i) => i !== idx))} className="text-[10px] font-bold text-gray-300 underline mt-1">Remover</button>
                       </div>
                     </div>
-                  ) : null;
+                  );
                 })}
               </div>
 
