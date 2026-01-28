@@ -37,7 +37,7 @@ const App: React.FC = () => {
     load();
   }, []);
 
-  // CÁLCULO TOTAL CORRIGIDO (Considera Itens Normais + Promoção + Adicionais)
+  // CÁLCULO TOTAL (Soma Base + Adicionais * Quantidade)
   const total = cart.reduce((acc, item) => {
     let itemBasePrice = 0;
     let extrasPrice = 0;
@@ -110,9 +110,12 @@ const App: React.FC = () => {
           return sum + (ex?.price || 0);
         }, 0);
         
-        const itemTotalIndividual = p.price + itemExtrasPrice;
+        // Preço unitário total (base + adicionais)
+        const unitPriceTotal = p.price + itemExtrasPrice;
+        // Total da linha (unitário * quantidade)
+        const lineTotal = unitPriceTotal * item.quantity;
 
-        message += `• ${item.quantity}x ${p.name} (R$ ${itemTotalIndividual.toFixed(2)})\n`;
+        message += `• ${item.quantity}x ${p.name} (R$ ${lineTotal.toFixed(2)})\n`;
         
         item.selectedExtras.forEach(exId => {
           const ex = p.extras?.find((e: any) => e.id === exId);
@@ -123,10 +126,14 @@ const App: React.FC = () => {
       }
     });
 
+    message += `\n*Subtotal:* R$ ${total.toFixed(2)}`;
     message += `\n*Taxa Entrega:* R$ ${settings.deliveryFee.toFixed(2)}`;
     message += `\n*TOTAL:* R$ ${(total + settings.deliveryFee).toFixed(2)}`;
 
-    const url = `https://api.whatsapp.com/send?phone=55${settings.whatsapp}&text=${encodeURIComponent(message)}`;
+    // CORREÇÃO DO LINK PARA WHATSAPP BUSINESS: Limpa o número e usa wa.me
+    const cleanPhone = settings.whatsapp.replace(/\D/g, '');
+    const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
+    
     window.open(url, '_blank');
   };
 
