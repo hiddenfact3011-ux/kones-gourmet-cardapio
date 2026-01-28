@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, ArrowLeft, Settings, Tag, Store, Camera, Save, BarChart3, Star, CheckCircle2, X, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Settings, Tag, Store, Camera, Save, BarChart3, Star, CheckCircle2, X, TrendingUp, Link, Copy } from 'lucide-react';
 import { AppSettings, Category, Product } from '../types';
 import { ADMIN_PASSWORD } from '../constants';
 import { supabase } from '../lib/supabase';
@@ -29,6 +29,11 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
       r.onloadend = () => cb(r.result);
       r.readAsDataURL(f);
     }
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    alert("Link do cardápio copiado!");
   };
 
   if (!isAdminLoggedIn) return (
@@ -67,7 +72,6 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
               <div className="bg-white p-7 rounded-[32px] border text-center shadow-sm"><p className="text-[10px] text-gray-400 font-black uppercase mb-1 tracking-widest">Mês</p><p className="text-3xl font-black text-red-600 italic">R$ 0,00</p></div>
             </div>
             
-            {/* NOVO CARD: PRODUTO MAIS VENDIDO */}
             <div className="bg-white p-8 rounded-[40px] border shadow-sm flex items-center justify-between border-l-[12px] border-l-green-500">
                <div className="space-y-1">
                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">🏆 Produto Mais Vendido</p>
@@ -86,6 +90,16 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
 
         {tab === 'store' && (
           <div className="animate-slide-in space-y-8">
+            {/* LINK DO APP PARA SILVIA COPIAR */}
+            <div className="bg-red-600 p-8 rounded-[40px] shadow-xl text-white space-y-4">
+               <h3 className="font-black flex items-center gap-2 uppercase tracking-widest text-xs"><Link size={18}/> Seu Link do Cardápio</h3>
+               <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl flex justify-between items-center gap-4">
+                 <p className="text-xs font-bold truncate opacity-80">{window.location.href}</p>
+                 <button onClick={copyLink} className="bg-white text-red-600 p-2 rounded-xl shadow-lg hover:scale-105 transition active:scale-95"><Copy size={18}/></button>
+               </div>
+               <p className="text-[10px] font-medium opacity-70">Silvia, este é o link que você deve enviar para seus clientes!</p>
+            </div>
+
             <div className="bg-white p-8 rounded-[40px] border shadow-sm space-y-8">
               <h3 className="font-black flex items-center gap-2 text-zinc-800"><Store size={20} className="text-red-600"/> Dados da Loja</h3>
               <div className="flex gap-6 items-center justify-center">
@@ -113,7 +127,6 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
               </div>
             </div>
 
-            {/* EDIÇÃO DA PROMOÇÃO DO DIA */}
             <div className="bg-white p-8 rounded-[40px] border shadow-sm space-y-6 border-red-600/30">
               <h3 className="font-black flex items-center gap-2 text-zinc-800"><Star size={20} className="text-red-600"/> Promoção do Dia</h3>
               <label className="flex items-center gap-3 cursor-pointer group">

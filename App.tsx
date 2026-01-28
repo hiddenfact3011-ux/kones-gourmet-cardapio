@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Search, X, MapPin, Clock, Star, ShoppingBag, Send, ChevronRight, MessageCircle, Copy, CheckCircle2 } from 'lucide-react';
+import { Settings, Search, X, MapPin, Clock, Star, ShoppingBag, Send, ChevronRight, MessageCircle, Copy, CheckCircle2, Share2 } from 'lucide-react';
 import { Product, Category, AppSettings, CartItem, View } from './types';
 import { DEFAULT_SETTINGS, INITIAL_CATEGORIES, INITIAL_PRODUCTS } from './constants';
 import AdminDashboard from './components/AdminDashboard';
@@ -47,6 +47,25 @@ const App: React.FC = () => {
     return acc + (p.price + extrasPrice) * item.quantity;
   }, 0);
 
+  const handleShare = async () => {
+    const shareData = {
+      title: settings.storeName,
+      text: `Confira o cardápio da ${settings.storeName}!`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link copiado para a área de transferência!');
+      }
+    } catch (err) {
+      console.log('Erro ao compartilhar', err);
+    }
+  };
+
   const sendOrder = () => {
     if (!customerInfo.name || !customerInfo.address) return alert("Silvia, peça ao cliente para preencher nome e endereço!");
     
@@ -67,7 +86,6 @@ const App: React.FC = () => {
       if (p) {
         message += `• ${item.quantity}x ${p.name} (R$ ${p.price.toFixed(2)})\n`;
         item.selectedExtras.forEach(exId => {
-          // Fixed reference from 'id' to 'exId'
           const ex = p.extras.find(e => e.id === exId);
           if (ex) message += `  + ${ex.name} (R$ ${ex.price.toFixed(2)})\n`;
         });
@@ -84,7 +102,6 @@ const App: React.FC = () => {
 
   const handlePromotionClick = () => {
     if (settings.promotion?.active) {
-      // Tenta achar o produto original ou cria um temporário baseado na promo
       const promoProduct: Product = {
         id: 'promo-item',
         name: settings.promotion.name,
@@ -110,6 +127,7 @@ const App: React.FC = () => {
         <img src={settings.banner} className="w-full h-full object-cover" alt="Banner" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
         <button onClick={() => setView('admin')} className="absolute top-5 left-5 p-2.5 bg-white/10 backdrop-blur-md rounded-full text-white"><Settings size={22}/></button>
+        <button onClick={handleShare} className="absolute top-5 right-5 p-2.5 bg-white/10 backdrop-blur-md rounded-full text-white"><Share2 size={22}/></button>
         <div className="absolute -bottom-8 left-6 flex items-end gap-4">
           <img src={settings.logo} className="w-24 h-24 rounded-2xl border-4 border-white shadow-xl object-cover bg-white" />
           <div className="pb-2 text-white">
@@ -123,7 +141,6 @@ const App: React.FC = () => {
       </div>
 
       <div className="mt-12 px-5 max-w-2xl mx-auto space-y-6">
-        {/* PROMOÇÃO DO DIA FUNCIONAL */}
         {settings.promotion?.active && (
           <div 
             className="bg-gradient-to-r from-red-600 to-red-800 rounded-[32px] p-1 shadow-lg animate-pulse hover:animate-none cursor-pointer overflow-hidden transform active:scale-95 transition" 
@@ -151,7 +168,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* CATEGORIAS */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b mt-6 overflow-x-auto hide-scrollbar">
         <div className="px-5 flex gap-8 py-4">
           <button onClick={() => setSelectedCategory('all')} className={`text-xs font-black whitespace-nowrap tracking-widest ${selectedCategory === 'all' ? 'text-red-600 border-b-2 border-red-600 pb-1' : 'text-gray-400'}`}>TUDO</button>
@@ -161,7 +177,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* LISTA DE PRODUTOS */}
       <div className="px-5 max-w-2xl mx-auto mt-8 space-y-10">
         {categories.filter(c => selectedCategory === 'all' || c.id === selectedCategory).map(cat => (
           <div key={cat.id} className="space-y-4">
@@ -182,7 +197,6 @@ const App: React.FC = () => {
         ))}
       </div>
 
-      {/* SACOLA FLUTUANTE */}
       {cart.length > 0 && (
         <div className="fixed bottom-6 left-0 right-0 px-5 z-50 flex justify-center">
           <button onClick={() => setIsCartOpen(true)} className="w-full max-w-2xl bg-red-600 text-white font-black py-5 rounded-2xl flex justify-between items-center px-8 shadow-xl">
@@ -192,7 +206,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL DETALHES DO PRODUTO */}
       {selectedProduct && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/70 backdrop-blur-sm animate-slide-in">
           <div className="bg-white w-full max-w-xl rounded-t-[40px] max-h-[95vh] flex flex-col overflow-hidden shadow-2xl">
@@ -233,7 +246,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL CARRINHO / CHECKOUT COMPLETO */}
       {isCartOpen && (
         <div className="fixed inset-0 z-[110] flex items-end justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-white w-full max-w-xl rounded-t-[40px] max-h-[95vh] flex flex-col shadow-2xl">
@@ -245,7 +257,6 @@ const App: React.FC = () => {
               <div className="space-y-4">
                 {cart.map((item, idx) => {
                   const p = products.find(prod => prod.id === item.productId) || (item.productId === 'promo-item' ? { name: item.productId, price: total / item.quantity, extras: [] } : null);
-                  // Lógica especial para item de promoção virtual
                   const itemName = item.productId === 'promo-item' ? cart[idx].notes.includes('Promo') ? 'Promoção do Dia' : products.find(prod => prod.id === item.productId)?.name || 'Item' : products.find(prod => prod.id === item.productId)?.name;
                   const itemPrice = item.productId === 'promo-item' ? settings.promotion?.price || 0 : products.find(prod => prod.id === item.productId)?.price || 0;
 
@@ -267,7 +278,6 @@ const App: React.FC = () => {
                 })}
               </div>
 
-              {/* DADOS PARA ENTREGA */}
               <div className="space-y-4 bg-gray-50 p-6 rounded-[32px] border border-gray-100 shadow-inner">
                 <p className="text-xs font-black text-gray-400 uppercase tracking-widest text-center mb-2">Finalizar Pedido</p>
                 <input placeholder="Seu Nome Completo" className="w-full p-4 rounded-xl border-2 border-white focus:border-red-600 outline-none font-bold shadow-sm transition" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} />
@@ -283,7 +293,6 @@ const App: React.FC = () => {
                   </div>
                 </div>
 
-                {/* EXIBIÇÃO DO PIX SE SELECIONADO */}
                 {customerInfo.payment === 'PIX' && (
                   <div className="mt-4 p-4 bg-red-50 rounded-2xl border border-red-100 animate-slide-in">
                     <p className="text-[10px] font-black text-red-600 uppercase mb-2 flex items-center gap-1"><Copy size={12}/> Copie a Chave PIX abaixo</p>
