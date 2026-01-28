@@ -1,17 +1,7 @@
 
-import { AppSettings, Category, Product, BusinessHours } from './types';
+import { AppSettings, Category, Product } from './types';
 
 export const ADMIN_PASSWORD = '2707';
-
-const INITIAL_HOURS: BusinessHours[] = [
-  { day: 'Segunda', open: '18:00', close: '23:00', isOpen: true },
-  { day: 'Terça', open: '18:00', close: '23:00', isOpen: true },
-  { day: 'Quarta', open: '18:00', close: '23:00', isOpen: true },
-  { day: 'Quinta', open: '18:00', close: '23:00', isOpen: true },
-  { day: 'Sexta', open: '18:00', close: '00:00', isOpen: true },
-  { day: 'Sábado', open: '18:00', close: '00:00', isOpen: true },
-  { day: 'Domingo', open: '18:00', close: '23:00', isOpen: true },
-];
 
 export const DEFAULT_SETTINGS: AppSettings = {
   storeName: 'Kones Gourmet',
@@ -21,7 +11,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pixKey: '64993075543',
   pixName: 'Silvia Leticia Ferreira',
   deliveryFee: 5.00,
-  businessHours: INITIAL_HOURS
+  promotion: {
+    active: false,
+    name: 'Promoção do Dia',
+    description: 'Aproveite nosso desconto especial!',
+    price: 0,
+    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400'
+  }
 };
 
 export const INITIAL_CATEGORIES: Category[] = [
@@ -29,15 +25,4 @@ export const INITIAL_CATEGORIES: Category[] = [
   { id: '2', name: 'Kones Doces' }
 ];
 
-export const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: 'p1',
-    name: 'Kone de Frango',
-    description: 'Frango desfiado com catupiry.',
-    price: 18.50,
-    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400',
-    categoryId: '1',
-    extras: [],
-    active: true
-  }
-];
+export const INITIAL_PRODUCTS: Product[] = [];

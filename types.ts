@@ -19,17 +19,14 @@ export interface Product {
 export interface Category {
   id: string;
   name: string;
-  globalExtras?: Extra[];
 }
 
-/**
- * Interface representing business operating hours for a specific day.
- */
-export interface BusinessHours {
-  day: string;
-  open: string;
-  close: string;
-  isOpen: boolean;
+export interface Promotion {
+  active: boolean;
+  name: string;
+  description: string;
+  price: number;
+  image: string;
 }
 
 export interface AppSettings {
@@ -40,7 +37,7 @@ export interface AppSettings {
   pixKey: string;
   pixName: string;
   deliveryFee: number;
-  businessHours?: BusinessHours[];
+  promotion?: Promotion;
 }
 
 export interface CartItem {
@@ -52,4 +49,3 @@ export interface CartItem {
 }
 
 export type View = 'menu' | 'admin';
-export type CartStep = 'items' | 'checkout' | 'confirm';
