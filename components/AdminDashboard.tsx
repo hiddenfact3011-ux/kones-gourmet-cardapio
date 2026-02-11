@@ -17,23 +17,45 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
     setLoading(true);
     try {
       let dataToSave = data;
+      
+      // Sanitização básica para evitar erros de JSON no Supabase
       if (table === 'products') {
-        dataToSave = data.map((p: any) => ({ ...p, extras: p.extras || [] }));
+        dataToSave = data.map((p: any) => ({
+          id: p.id,
+          name: p.name || 'Sem nome',
+          description: p.description || '',
+          price: Number(p.price) || 0,
+          image: p.image,
+          categoryId: p.categoryId,
+          extras: p.extras || [],
+          active: p.active !== false
+        }));
+      } else if (table === 'categories') {
+        dataToSave = data.map((c: any) => ({
+          id: c.id,
+          name: c.name || 'Nova Categoria'
+        }));
       }
 
       let error;
       if (table === 'settings') {
-        const result = await supabase.from('settings').upsert({ id: 1, data: dataToSave });
-        error = result.error;
+        // Para configurações, sempre usamos o ID 1
+        const { error: upsertError } = await supabase.from('settings').upsert({ id: 1, data: dataToSave });
+        error = upsertError;
       } else {
-        const result = await supabase.from(table).upsert(dataToSave, { onConflict: 'id' });
-        error = result.error;
+        const { error: upsertError } = await supabase.from(table).upsert(dataToSave, { onConflict: 'id' });
+        error = upsertError;
       }
 
       if (error) throw error;
-      alert("✅ Alterações salvas com sucesso!");
+      alert("✅ Silvia, tudo salvo no banco de dados!");
     } catch (e: any) {
-      alert(`❌ Erro ao salvar: ${e.message}`);
+      console.error("Erro completo:", e);
+      if (e.message === 'Failed to fetch') {
+        alert("❌ Erro de Conexão (Failed to Fetch):\n\nIsso geralmente acontece se:\n1. O Supabase está fora do ar ou o projeto foi pausado.\n2. Você tem um AdBlocker ligado que bloqueia o banco de dados.\n3. As tabelas ainda não foram criadas no painel do Supabase.");
+      } else {
+        alert(`❌ Erro ao salvar: ${e.message || 'Erro desconhecido'}`);
+      }
     }
     setLoading(false);
   };
@@ -94,7 +116,7 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
 
       <main className="flex-1 p-5 max-w-4xl mx-auto w-full pb-20">
         {tab === 'overview' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-slide-in">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-white p-6 rounded-3xl border shadow-sm">
                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Vendas Hoje</p>
@@ -125,7 +147,7 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
         )}
 
         {tab === 'products' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-slide-in">
             <div className="flex justify-between items-center bg-white p-4 rounded-2xl border shadow-sm">
                <h3 className="font-black text-gray-900 uppercase text-xs">Gestão de Itens ({products.length})</h3>
                <button onClick={() => setProducts([{ id: generateId(), name: 'Novo Item', description: '', price: 0, image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400', categoryId: categories[0]?.id || '', extras: [], active: true }, ...products])} className="bg-red-600 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase flex items-center gap-2 shadow-lg active:scale-95 transition"><Plus size={16}/> Novo Produto</button>
@@ -185,11 +207,12 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                 </div>
               ))}
             </div>
+            <button onClick={() => save('products', products)} disabled={loading} className="w-full bg-red-600 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest mt-4 disabled:opacity-50">Salvar Todos os Itens</button>
           </div>
         )}
 
         {tab === 'categories' && (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-slide-in">
             <button onClick={() => setCategories([{ id: generateId(), name: 'Nova Categoria' }, ...categories])} className="bg-red-600 text-white px-8 py-4 rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition flex items-center gap-2"><Plus size={16}/> Nova Categoria</button>
             <div className="grid gap-3">
               {categories.map((c: any, i: number) => (
