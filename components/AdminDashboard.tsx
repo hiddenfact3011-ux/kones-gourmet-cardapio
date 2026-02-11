@@ -21,9 +21,20 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
     [newCategories[index], newCategories[targetIndex]] = [newCategories[targetIndex], newCategories[index]];
     setCategories(newCategories);
     
-    // Atualizar a ordem localmente
     const newOrder = newCategories.map(c => c.id);
     setSettings((prev: any) => ({ ...prev, categoryOrder: newOrder }));
+  };
+
+  const moveProduct = (index: number, direction: 'up' | 'down') => {
+    const newProducts = [...products];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newProducts.length) return;
+
+    [newProducts[index], newProducts[targetIndex]] = [newProducts[targetIndex], newProducts[index]];
+    setProducts(newProducts);
+    
+    const newOrder = newProducts.map(p => p.id);
+    setSettings((prev: any) => ({ ...prev, productOrder: newOrder }));
   };
 
   const save = async (table: string, data?: any) => {
@@ -57,9 +68,16 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
         const { error: upsertError } = await supabase.from('categories').upsert(dataToSave, { onConflict: 'id' });
         error = upsertError;
         
-        // Sincroniza ordem das categorias nas configurações
         const currentOrder = categories.map((cat: any) => cat.id);
         const newSettings = { ...settings, categoryOrder: currentOrder };
+        setSettings(newSettings);
+        await supabase.from('settings').upsert({ id: 1, data: newSettings });
+      } else if (table === 'products') {
+        const { error: upsertError } = await supabase.from('products').upsert(dataToSave, { onConflict: 'id' });
+        error = upsertError;
+
+        const currentOrder = products.map((p: any) => p.id);
+        const newSettings = { ...settings, productOrder: currentOrder };
         setSettings(newSettings);
         await supabase.from('settings').upsert({ id: 1, data: newSettings });
       } else {
@@ -81,26 +99,18 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
     
     setLoading(true);
     try {
-      // 1. Tenta deletar do Supabase (ignora erro se o item não existir no banco ainda)
       const { error } = await supabase.from(table).delete().eq('id', id);
       
-      // 2. Sempre atualiza o estado local para que o item suma da tela imediatamente
       if (table === 'products') {
         setProducts((prev: any) => prev.filter((p: any) => p.id !== id));
       } else if (table === 'categories') {
         setCategories((prev: any) => prev.filter((c: any) => c.id !== id));
-        // Remove também da ordem nas configurações
         setSettings((prev: any) => {
           const newOrder = (prev.categoryOrder || []).filter((oid: string) => oid !== id);
           const newSettings = { ...prev, categoryOrder: newOrder };
-          // Opcional: Salva as novas configurações de ordem silenciosamente
           supabase.from('settings').upsert({ id: 1, data: newSettings });
           return newSettings;
         });
-      }
-      
-      if (error && error.message !== 'Unexpected token') {
-          console.warn("Aviso na exclusão do banco:", error.message);
       }
       
       alert("🗑️ Item removido com sucesso!");
@@ -247,6 +257,12 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
               {products.map((p: any, i: number) => (
                 <div key={p.id} className="bg-white p-6 rounded-[32px] border shadow-sm space-y-6">
                   <div className="flex flex-col md:flex-row gap-6">
+                    {/* Botões de Ordem dos Produtos */}
+                    <div className="flex flex-col gap-1 shrink-0 justify-center">
+                      <button onClick={() => moveProduct(i, 'up')} disabled={i === 0} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-red-600 disabled:opacity-20 transition shadow-sm border border-gray-100"><ChevronUp size={20}/></button>
+                      <button onClick={() => moveProduct(i, 'down')} disabled={i === products.length - 1} className="p-2 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-red-600 disabled:opacity-20 transition shadow-sm border border-gray-100"><ChevronDown size={20}/></button>
+                    </div>
+
                     <div className="relative w-32 h-32 shrink-0 mx-auto">
                       <img src={p.image} className="w-full h-full rounded-2xl object-cover border shadow-inner" />
                       <label className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center rounded-2xl cursor-pointer transition text-white"><Camera size={20}/><input type="file" className="hidden" onChange={e => upload(e, (b: any) => { const np = [...products]; np[i].image = b; setProducts(np); })}/></label>

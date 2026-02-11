@@ -36,34 +36,36 @@ const App: React.FC = () => {
         
         if (c?.length) {
           const uniqueCats = Array.from(new Map(c.map((item: Category) => [item.id, item])).values());
-          
           let sorted = [...uniqueCats];
-          
-          // Ordem preferida da Silvia
           const silviaOrder = ["Pizzas no cone", "Pizzas tradicionais", "caribó", "macarrão", "Batata frita", "omelete", "Peixe", "bebidas"];
-          
           const orderToUse = loadedSettings.categoryOrder || [];
 
           sorted.sort((a, b) => {
-            // Se houver uma ordem salva no banco, usa ela
             if (orderToUse.length > 0) {
               const idxA = orderToUse.indexOf(a.id);
               const idxB = orderToUse.indexOf(b.id);
               return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
             }
-            // Se não, tenta a ordem nominal da Silvia
             const nameA = a.name.toLowerCase();
             const nameB = b.name.toLowerCase();
             const sIdxA = silviaOrder.findIndex(name => nameA.includes(name.toLowerCase()));
             const sIdxB = silviaOrder.findIndex(name => nameB.includes(name.toLowerCase()));
-            
             return (sIdxA === -1 ? 999 : sIdxA) - (sIdxB === -1 ? 999 : sIdxB);
           });
-          
           setCategories(sorted);
         }
         
-        if (p?.length) setProducts(p);
+        if (p?.length) {
+          let sortedProducts = [...p];
+          if (loadedSettings.productOrder) {
+            sortedProducts.sort((a, b) => {
+              const idxA = loadedSettings.productOrder!.indexOf(a.id);
+              const idxB = loadedSettings.productOrder!.indexOf(b.id);
+              return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+            });
+          }
+          setProducts(sortedProducts);
+        }
       } catch (err) { console.warn("Modo Offline"); }
     };
     load();
@@ -75,46 +77,34 @@ const App: React.FC = () => {
     const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'] as const;
     const today = days[now.getDay()];
     const schedule = settings.businessHours[today];
-
     if (!schedule || schedule.closed) return false;
-
     const [openH, openM] = schedule.open.split(':').map(Number);
     const [closeH, closeM] = schedule.close.split(':').map(Number);
-    
     const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
     const openTimeMinutes = openH * 60 + openM;
     let closeTimeMinutes = closeH * 60 + closeM;
-
-    if (closeTimeMinutes < openTimeMinutes) {
-      return currentTimeMinutes >= openTimeMinutes || currentTimeMinutes <= closeTimeMinutes;
-    }
-
+    if (closeTimeMinutes < openTimeMinutes) return currentTimeMinutes >= openTimeMinutes || currentTimeMinutes <= closeTimeMinutes;
     return currentTimeMinutes >= openTimeMinutes && currentTimeMinutes <= closeTimeMinutes;
   };
 
   const total = cart.reduce((acc, item) => {
     const isPromo = item.productId === 'promo-item';
     const p = isPromo ? { price: settings.promotion?.price || 0, extras: [] as any[] } : products.find(prod => prod.id === item.productId);
-    
     if (!p) return acc;
-    
     const extrasPrice = item.selectedExtras.reduce((sum, id) => {
       const ex = p.extras?.find((e: any) => e.id === id);
       return sum + (ex?.price || 0);
     }, 0);
-    
     return acc + (p.price + extrasPrice) * item.quantity;
   }, 0);
 
   const sendOrder = () => {
     if (!customerInfo.name || !customerInfo.address) return alert("Por favor, preencha nome e endereço!");
-    
     let message = `*NOVO PEDIDO - ${settings.storeName.toUpperCase()}*\n\n`;
     message += `*CLIENTE:* ${customerInfo.name}\n`;
     message += `*ENDEREÇO:* ${customerInfo.address}\n`;
     message += `*REF:* ${customerInfo.ref}\n`;
     message += `*PAGAMENTO:* ${customerInfo.payment}\n\n`;
-    
     message += `*ITENS:*\n`;
     cart.forEach(item => {
       const p = item.productId === 'promo-item' ? { name: settings.promotion?.name, price: settings.promotion?.price, extras: [] as any[] } : products.find(prod => prod.id === item.productId);
@@ -122,16 +112,13 @@ const App: React.FC = () => {
         const itemExtras = item.selectedExtras.map(id => p.extras?.find((e: any) => e.id === id)).filter(Boolean);
         const extrasTotal = itemExtras.reduce((s, e) => s + (e?.price || 0), 0);
         const itemTotal = (p.price! + extrasTotal) * item.quantity;
-
         message += `✅ ${item.quantity}x ${p.name} (R$ ${itemTotal.toFixed(2)})\n`;
         itemExtras.forEach(ex => message += `   + ${ex?.name} (R$ ${ex?.price.toFixed(2)})\n`);
         if (item.notes) message += `   _Obs: ${item.notes}_\n`;
       }
     });
-
     message += `\n*TAXA ENTREGA:* R$ ${settings.deliveryFee.toFixed(2)}`;
     message += `\n*TOTAL DO PEDIDO:* R$ ${(total + settings.deliveryFee).toFixed(2)}`;
-
     const cleanPhone = settings.whatsapp.replace(/\D/g, '');
     const url = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
@@ -229,9 +216,9 @@ const App: React.FC = () => {
 
       <div className="sticky top-0 z-40 bg-white border-b mt-6 overflow-x-auto hide-scrollbar shadow-sm">
         <div className="px-5 flex gap-6 py-4">
-          <button onClick={() => setSelectedCategory('all')} className={`text-sm font-bold whitespace-nowrap pb-1 ${selectedCategory === 'all' ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-500'}`}>Tudo</button>
+          <button onClick={() => setSelectedCategory('all')} className={`text-sm font-bold whitespace-nowrap pb-1 ${selectedCategory === 'all' ? 'text-ifood border-b-2 border-ifood' : 'text-gray-500'}`}>Tudo</button>
           {categories.map(c => (
-            <button key={c.id} onClick={() => setSelectedCategory(c.id)} className={`text-sm font-bold whitespace-nowrap pb-1 capitalize ${selectedCategory === c.id ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-500'}`}>{c.name}</button>
+            <button key={c.id} onClick={() => setSelectedCategory(c.id)} className={`text-sm font-bold whitespace-nowrap pb-1 capitalize ${selectedCategory === c.id ? 'text-ifood border-b-2 border-ifood' : 'text-gray-500'}`}>{c.name}</button>
           ))}
         </div>
       </div>
@@ -240,7 +227,6 @@ const App: React.FC = () => {
         {categories.filter(c => selectedCategory === 'all' || c.id === selectedCategory).map(cat => {
           const catProducts = products.filter(p => p.categoryId === cat.id && p.active && p.name.toLowerCase().includes(searchQuery.toLowerCase()));
           if (catProducts.length === 0) return null;
-          
           return (
             <div key={cat.id} className="space-y-4">
               <h3 className="font-black text-lg text-gray-900">{cat.name}</h3>
@@ -254,7 +240,7 @@ const App: React.FC = () => {
                     </div>
                     <div className="relative">
                       <img src={p.image} className="w-28 h-28 rounded-xl object-cover shadow-sm group-hover:scale-105 transition duration-300" />
-                      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white px-4 py-1.5 rounded-lg shadow-md border border-gray-100 text-[10px] font-black text-red-600 uppercase">Adicionar</div>
+                      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white px-4 py-1.5 rounded-lg shadow-md border border-gray-100 text-[10px] font-black text-ifood uppercase">Adicionar</div>
                     </div>
                   </div>
                 ))}
@@ -266,7 +252,7 @@ const App: React.FC = () => {
 
       {cart.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg z-50">
-          <button onClick={() => setIsCartOpen(true)} className="w-full bg-red-600 text-white font-black py-4 rounded-xl flex justify-between items-center px-6 shadow-2xl active:scale-95 transition">
+          <button onClick={() => setIsCartOpen(true)} className="w-full bg-ifood text-white font-black py-4 rounded-xl flex justify-between items-center px-6 shadow-2xl active:scale-95 transition">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-1.5 rounded-lg"><ShoppingBag size={20}/></div>
               <span className="text-sm">Ver sacola</span>
@@ -287,9 +273,8 @@ const App: React.FC = () => {
               <div>
                 <h2 className="text-2xl font-black text-gray-900">{selectedProduct.name}</h2>
                 <p className="text-sm text-gray-400 mt-2 leading-relaxed">{selectedProduct.description}</p>
-                <p className="text-lg font-black text-red-600 mt-3">R$ {selectedProduct.price.toFixed(2)}</p>
+                <p className="text-lg font-black text-ifood mt-3">R$ {selectedProduct.price.toFixed(2)}</p>
               </div>
-
               {selectedProduct.extras.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
@@ -297,21 +282,20 @@ const App: React.FC = () => {
                     <span className="text-[10px] bg-gray-200 px-2 py-0.5 rounded font-bold text-gray-600 uppercase">Opcional</span>
                   </div>
                   {selectedProduct.extras.map(e => (
-                    <label key={e.id} className="flex justify-between items-center p-4 border rounded-2xl cursor-pointer hover:border-red-600/30 hover:bg-red-50/20 transition">
-                      <span className="text-sm font-bold text-gray-700">{e.name} <span className="text-red-600 ml-1">+ R$ {e.price.toFixed(2)}</span></span>
-                      <input type="checkbox" checked={selectedExtras.includes(e.id)} onChange={() => setSelectedExtras(prev => prev.includes(e.id) ? prev.filter(x => x !== e.id) : [...prev, e.id])} className="w-5 h-5 accent-red-600 rounded-md"/>
+                    <label key={e.id} className="flex justify-between items-center p-4 border rounded-2xl cursor-pointer hover:border-ifood/30 hover:bg-red-50/20 transition">
+                      <span className="text-sm font-bold text-gray-700">{e.name} <span className="text-ifood ml-1">+ R$ {e.price.toFixed(2)}</span></span>
+                      <input type="checkbox" checked={selectedExtras.includes(e.id)} onChange={() => setSelectedExtras(prev => prev.includes(e.id) ? prev.filter(x => x !== e.id) : [...prev, e.id])} className="w-5 h-5 accent-ifood rounded-md"/>
                     </label>
                   ))}
                 </div>
               )}
-
               <div className="space-y-3">
                 <p className="text-xs font-black text-gray-500 uppercase tracking-widest">Alguma observação?</p>
                 <textarea 
                   value={notes} 
                   onChange={e => setNotes(e.target.value)} 
                   placeholder="Ex: Tirar cebola, pouco sal, etc..." 
-                  className="w-full p-4 bg-gray-100 rounded-2xl outline-none text-sm h-28 focus:ring-2 ring-red-600/20 transition resize-none font-medium"
+                  className="w-full p-4 bg-gray-100 rounded-2xl outline-none text-sm h-28 focus:ring-2 ring-ifood/20 transition resize-none font-medium"
                 />
               </div>
             </div>
@@ -319,7 +303,7 @@ const App: React.FC = () => {
               <button onClick={() => {
                 setCart([...cart, { id: Math.random().toString(), productId: selectedProduct.id, quantity: 1, selectedExtras, notes }]);
                 setSelectedProduct(null);
-              }} className="flex-1 bg-red-600 text-white font-black py-4 rounded-xl shadow-lg uppercase text-xs tracking-widest hover:bg-red-700 transition">Adicionar • R$ {(selectedProduct.price + selectedExtras.reduce((s, id) => s + (selectedProduct.extras.find(e => e.id === id)?.price || 0), 0)).toFixed(2)}</button>
+              }} className="flex-1 bg-ifood text-white font-black py-4 rounded-xl shadow-lg uppercase text-xs tracking-widest hover:bg-red-700 transition">Adicionar • R$ {(selectedProduct.price + selectedExtras.reduce((s, id) => s + (selectedProduct.extras.find(e => e.id === id)?.price || 0), 0)).toFixed(2)}</button>
             </div>
           </div>
         </div>
@@ -332,7 +316,6 @@ const App: React.FC = () => {
               <h2 className="text-xl font-black text-gray-900">Sua Sacola</h2>
               <button onClick={() => setIsCartOpen(false)} className="p-2 bg-gray-100 rounded-full text-gray-600"><X size={20}/></button>
             </div>
-            
             <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
               <div className="space-y-6">
                 {cart.map((item, idx) => {
@@ -340,46 +323,41 @@ const App: React.FC = () => {
                   if (!p) return null;
                   const itemExtras = item.selectedExtras.map(id => p.extras?.find((e: any) => e.id === id));
                   const itemTotal = (p.price! + itemExtras.reduce((s, e) => s + (e?.price || 0), 0)) * item.quantity;
-
                   return (
                     <div key={item.id} className="flex justify-between items-start gap-4 pb-6 border-b border-gray-50 last:border-0">
                       <div className="flex-1 space-y-1">
                         <p className="font-bold text-gray-800">{item.quantity}x {p.name}</p>
                         {itemExtras.length > 0 && <p className="text-[10px] text-gray-400 font-medium italic">+ {itemExtras.map(e => e?.name).join(', ')}</p>}
                         {item.notes && <p className="text-[10px] text-gray-400 font-medium italic">Obs: {item.notes}</p>}
-                        <button onClick={() => setCart(cart.filter((_, i) => i !== idx))} className="text-[10px] font-black text-red-600 uppercase mt-2">Remover</button>
+                        <button onClick={() => setCart(cart.filter((_, i) => i !== idx))} className="text-[10px] font-black text-ifood uppercase mt-2">Remover</button>
                       </div>
                       <p className="font-black text-sm text-gray-900">R$ {itemTotal.toFixed(2)}</p>
                     </div>
                   );
                 })}
               </div>
-
               <div className="space-y-4 bg-gray-50 p-6 rounded-3xl border border-gray-100">
                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><MapPin size={14}/> Dados de Entrega</h3>
-                <input placeholder="Nome Completo" className="w-full p-4 rounded-xl border-2 border-transparent focus:border-red-600 bg-white shadow-sm outline-none font-bold text-sm" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} />
-                <input placeholder="Endereço e Número" className="w-full p-4 rounded-xl border-2 border-transparent focus:border-red-600 bg-white shadow-sm outline-none font-bold text-sm" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} />
-                <input placeholder="Ponto de Referência" className="w-full p-4 rounded-xl border-2 border-transparent focus:border-red-600 bg-white shadow-sm outline-none font-bold text-sm" value={customerInfo.ref} onChange={e => setCustomerInfo({...customerInfo, ref: e.target.value})} />
-                
+                <input placeholder="Nome Completo" className="w-full p-4 rounded-xl border-2 border-transparent focus:border-ifood bg-white shadow-sm outline-none font-bold text-sm" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} />
+                <input placeholder="Endereço e Número" className="w-full p-4 rounded-xl border-2 border-transparent focus:border-ifood bg-white shadow-sm outline-none font-bold text-sm" value={customerInfo.address} onChange={e => setCustomerInfo({...customerInfo, address: e.target.value})} />
+                <input placeholder="Ponto de Referência" className="w-full p-4 rounded-xl border-2 border-transparent focus:border-ifood bg-white shadow-sm outline-none font-bold text-sm" value={customerInfo.ref} onChange={e => setCustomerInfo({...customerInfo, ref: e.target.value})} />
                 <div className="pt-4 space-y-3">
                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><Clock size={14}/> Forma de Pagamento</p>
                    <div className="grid grid-cols-3 gap-2">
                      {['PIX', 'Dinheiro', 'Cartão'].map(m => (
-                       <button key={m} onClick={() => setCustomerInfo({...customerInfo, payment: m})} className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all ${customerInfo.payment === m ? 'bg-red-600 text-white shadow-lg' : 'bg-white text-gray-400 border border-gray-200'}`}>{m}</button>
+                       <button key={m} onClick={() => setCustomerInfo({...customerInfo, payment: m})} className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all ${customerInfo.payment === m ? 'bg-ifood text-white shadow-lg' : 'bg-white text-gray-400 border border-gray-200'}`}>{m}</button>
                      ))}
                    </div>
                 </div>
               </div>
-
               <div className="space-y-2 pt-4 border-t">
                 <div className="flex justify-between text-gray-500 font-bold text-sm"><span>Subtotal</span><span>R$ {total.toFixed(2)}</span></div>
                 <div className="flex justify-between text-gray-500 font-bold text-sm"><span>Taxa de Entrega</span><span>R$ {settings.deliveryFee.toFixed(2)}</span></div>
-                <div className="flex justify-between text-gray-900 font-black text-xl mt-2"><span>Total</span><span className="text-red-600">R$ {(total + settings.deliveryFee).toFixed(2)}</span></div>
+                <div className="flex justify-between text-gray-900 font-black text-xl mt-2"><span>Total</span><span className="text-ifood">R$ {(total + settings.deliveryFee).toFixed(2)}</span></div>
               </div>
             </div>
-
             <div className="p-6 border-t bg-white">
-              <button onClick={sendOrder} className="w-full bg-red-600 text-white font-black py-4 rounded-xl shadow-xl flex items-center justify-center gap-3 uppercase text-xs tracking-widest active:scale-95 transition">
+              <button onClick={sendOrder} className="w-full bg-ifood text-white font-black py-4 rounded-xl shadow-xl flex items-center justify-center gap-3 uppercase text-xs tracking-widest active:scale-95 transition">
                 <MessageCircle size={20}/> Finalizar Pedido no WhatsApp
               </button>
             </div>
