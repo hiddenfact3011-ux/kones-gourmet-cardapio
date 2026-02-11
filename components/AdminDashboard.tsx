@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, ArrowLeft, Settings, Tag, Store, Camera, Save, BarChart3, Star, CheckCircle2, X, TrendingUp, Link, Copy, Package, LayoutDashboard, UtensilsCrossed, Clock } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Settings, Tag, Store, Camera, Save, BarChart3, Star, CheckCircle2, X, TrendingUp, Link, Copy, Package, LayoutDashboard, UtensilsCrossed, Clock, Sparkles } from 'lucide-react';
 import { AppSettings, Category, Product, DaySchedule } from '../types';
 import { ADMIN_PASSWORD } from '../constants';
 import { supabase } from '../lib/supabase';
@@ -49,7 +49,6 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
       alert("✅ Silvia, tudo salvo com sucesso!");
     } catch (e: any) {
       console.error("Erro completo:", e);
-      // Silvia, se o projeto estiver pausado, o erro cai aqui:
       if (e.message === 'Failed to fetch' || (e.status === 0)) {
         alert("⚠️ PROJETO PAUSADO NO SUPABASE\n\nSilvia, seu banco de dados entrou em repouso. Siga estes passos:\n\n1. Entre em app.supabase.com\n2. Clique no projeto 'Kones Gourmet'\n3. Clique em 'Restore Project'\n4. Espere 1 minuto e tente salvar aqui novamente.");
       } else {
@@ -169,7 +168,8 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                         </div>
                       </div>
                       <div className="space-y-4">
-                        <select className="w-full p-4 bg-gray-50 rounded-xl font-bold border outline-none" value={p.categoryId} onChange={e => { const np = [...products]; np[i].categoryId = e.target.value; setProducts(np); }}>
+                        <select className="w-full p-4 bg-gray-100 rounded-xl font-bold border outline-none" value={p.categoryId} onChange={e => { const np = [...products]; np[i].categoryId = e.target.value; setProducts(np); }}>
+                          <option value="">Selecione a Categoria</option>
                           {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                         </select>
                         <textarea className="w-full p-4 bg-gray-50 rounded-xl font-medium border h-14 resize-none outline-none focus:border-red-600 transition" value={p.description} onChange={e => { const np = [...products]; np[i].description = e.target.value; setProducts(np); }} placeholder="Descrição curta..." />
@@ -256,13 +256,59 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                  </div>
                </div>
 
+               {/* NOVO: EDITOR DO DESTAQUE DO DIA */}
+               <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 space-y-6">
+                 <div className="flex justify-between items-center">
+                   <h4 className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-2"><Sparkles size={16}/> Configurar Destaque do Dia</h4>
+                   <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1 rounded-full shadow-sm">
+                      <input type="checkbox" checked={settings.featuredItem?.active} onChange={e => setSettings({...settings, featuredItem: {...settings.featuredItem, active: e.target.checked}})} className="w-4 h-4 accent-amber-600" />
+                      <span className="text-[9px] font-black uppercase text-amber-600">Ativar Banner</span>
+                   </label>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                       <p className="text-[9px] font-black text-amber-400 uppercase">Escolha o Produto para Vender</p>
+                       <select 
+                        className="w-full p-4 bg-white rounded-xl font-bold border outline-none" 
+                        value={settings.featuredItem?.productId} 
+                        onChange={e => {
+                          const p = products.find((x:any) => x.id === e.target.value);
+                          setSettings({
+                            ...settings, 
+                            featuredItem: {
+                              ...settings.featuredItem, 
+                              productId: e.target.value,
+                              title: p?.name || settings.featuredItem.title,
+                              price: p?.price || settings.featuredItem.price,
+                              image: p?.image || settings.featuredItem.image,
+                              description: p?.description || settings.featuredItem.description
+                            }
+                          })
+                        }}
+                       >
+                         <option value="">Nenhum Produto Selecionado</option>
+                         {products.map((p:any) => <option key={p.id} value={p.id}>{p.name} (R$ {p.price.toFixed(2)})</option>)}
+                       </select>
+                       <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" value={settings.featuredItem?.title} onChange={e => setSettings({...settings, featuredItem: {...settings.featuredItem, title: e.target.value}})} placeholder="Título do Destaque" />
+                    </div>
+                    <div className="space-y-4">
+                       <p className="text-[9px] font-black text-amber-400 uppercase">Foto do Destaque</p>
+                       <div className="relative h-28 w-full">
+                          <img src={settings.featuredItem?.image} className="w-full h-full rounded-2xl object-cover border" />
+                          <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 rounded-2xl cursor-pointer transition text-white"><Camera/><input type="file" className="hidden" onChange={e => upload(e, (b:any) => setSettings({...settings, featuredItem: {...settings.featuredItem, image: b}}))}/></label>
+                       </div>
+                       <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" type="number" value={settings.featuredItem?.price} onChange={e => setSettings({...settings, featuredItem: {...settings.featuredItem, price: parseFloat(e.target.value)}})} placeholder="Preço do Destaque" />
+                    </div>
+                 </div>
+               </div>
+
                <div className="bg-red-50 p-6 rounded-2xl space-y-4">
                  <h4 className="text-[10px] font-black text-red-600 uppercase tracking-widest">Configurações Financeiras (PIX)</h4>
                  <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" value={settings.pixKey} onChange={e => setSettings({...settings, pixKey: e.target.value})} placeholder="Chave PIX" />
                  <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" value={settings.pixName} onChange={e => setSettings({...settings, pixName: e.target.value})} placeholder="Nome do Titular" />
                </div>
 
-               {/* HORÁRIOS DE FUNCIONAMENTO */}
                <div className="pt-6 space-y-4">
                   <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><Clock size={16}/> Horários de Funcionamento</h4>
                   <div className="grid gap-3">

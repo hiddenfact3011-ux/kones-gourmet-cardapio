@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Search, X, MapPin, Clock, Star, ShoppingBag, Send, ChevronRight, MessageCircle, Copy, CheckCircle2, Share2, Info } from 'lucide-react';
+import { Settings, Search, X, MapPin, Clock, Star, ShoppingBag, Send, ChevronRight, MessageCircle, Copy, CheckCircle2, Share2, Info, Sparkles } from 'lucide-react';
 import { Product, Category, AppSettings, CartItem, View } from './types';
 import { DEFAULT_SETTINGS, INITIAL_CATEGORIES, INITIAL_PRODUCTS } from './constants';
 import AdminDashboard from './components/AdminDashboard';
@@ -51,7 +51,6 @@ const App: React.FC = () => {
     const openTimeMinutes = openH * 60 + openM;
     let closeTimeMinutes = closeH * 60 + closeM;
 
-    // Caso o horário de fechamento seja após a meia-noite (ex: até 02:00)
     if (closeTimeMinutes < openTimeMinutes) {
       return currentTimeMinutes >= openTimeMinutes || currentTimeMinutes <= closeTimeMinutes;
     }
@@ -104,6 +103,16 @@ const App: React.FC = () => {
     window.open(url, '_blank');
   };
 
+  const handleFeaturedClick = () => {
+    if (!settings.featuredItem?.productId) return;
+    const product = products.find(p => p.id === settings.featuredItem?.productId);
+    if (product) {
+      setSelectedProduct(product);
+      setSelectedExtras([]);
+      setNotes('');
+    }
+  };
+
   if (view === 'admin') return <AdminDashboard settings={settings} setSettings={setSettings} categories={categories} setCategories={setCategories} products={products} setProducts={setProducts} onClose={() => setView('menu')} isAdminLoggedIn={isAdminLoggedIn} setIsAdminLoggedIn={setIsAdminLoggedIn} />;
 
   const isOpen = isStoreOpen();
@@ -151,6 +160,40 @@ const App: React.FC = () => {
         </div>
       </div>
 
+      {/* NOVO: DESTAQUE DO DIA SILVIA */}
+      {settings.featuredItem?.active && (
+        <div className="px-5 mt-6">
+          <div 
+            onClick={handleFeaturedClick}
+            className="relative overflow-hidden bg-gradient-to-br from-red-600 to-red-800 rounded-3xl p-6 text-white shadow-2xl cursor-pointer group active:scale-[0.98] transition-all duration-300"
+          >
+            <div className="absolute -top-4 -right-4 bg-white/10 w-32 h-32 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-700" />
+            <div className="relative z-10 flex items-center gap-6">
+              <div className="flex-1">
+                <span className="inline-flex items-center gap-1.5 bg-white text-red-600 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest animate-pulse">
+                  <Sparkles size={12}/> Sugestão da Silvia
+                </span>
+                <h2 className="text-2xl font-black mt-3 leading-tight italic">{settings.featuredItem.title}</h2>
+                <p className="text-xs text-white/80 mt-2 font-medium line-clamp-2">{settings.featuredItem.description}</p>
+                <div className="mt-4 flex items-center gap-3">
+                   <div className="bg-white text-red-600 px-4 py-2 rounded-xl font-black text-sm shadow-lg">
+                      R$ {settings.featuredItem.price.toFixed(2)}
+                   </div>
+                   <span className="text-[10px] font-black uppercase underline tracking-tighter decoration-white/40">Pedir Agora</span>
+                </div>
+              </div>
+              <div className="relative shrink-0">
+                <img 
+                  src={settings.featuredItem.image} 
+                  className="w-32 h-32 md:w-40 md:h-40 object-cover rounded-2xl shadow-2xl border-4 border-white/20 group-hover:rotate-3 transition-transform duration-500" 
+                  alt="Destaque"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="sticky top-0 z-40 bg-white border-b mt-6 overflow-x-auto hide-scrollbar shadow-sm">
         <div className="px-5 flex gap-6 py-4">
           <button onClick={() => setSelectedCategory('all')} className={`text-sm font-bold whitespace-nowrap pb-1 ${selectedCategory === 'all' ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-500'}`}>Destaques</button>
@@ -159,23 +202,6 @@ const App: React.FC = () => {
           ))}
         </div>
       </div>
-
-      {settings.promotion?.active && selectedCategory === 'all' && (
-        <div className="px-5 mt-6">
-          <div onClick={() => { setSelectedProduct({ id: 'promo-item', ...settings.promotion } as any); setSelectedExtras([]); setNotes(''); }} className="bg-red-50 rounded-2xl p-4 flex gap-4 border border-red-100 cursor-pointer hover:bg-red-100/50 transition group">
-            <img src={settings.promotion.image} className="w-24 h-24 rounded-xl object-cover" />
-            <div className="flex-1 py-1">
-              <span className="bg-red-600 text-white text-[8px] font-black px-2 py-0.5 rounded uppercase">Oferta Imperdível</span>
-              <h3 className="font-bold text-gray-900 mt-1">{settings.promotion.name}</h3>
-              <p className="text-xs text-gray-500 line-clamp-1 mt-0.5">{settings.promotion.description}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <p className="text-red-600 font-black text-lg">R$ {settings.promotion.price.toFixed(2)}</p>
-                <span className="text-[10px] text-gray-400 line-through font-bold">R$ {(settings.promotion.price * 1.3).toFixed(2)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="px-5 mt-8 space-y-10">
         {categories.filter(c => selectedCategory === 'all' || c.id === selectedCategory).map(cat => (

@@ -29,6 +29,15 @@ export interface Promotion {
   image: string;
 }
 
+export interface FeaturedItem {
+  active: boolean;
+  productId: string;
+  title: string;
+  description: string;
+  image: string;
+  price: number;
+}
+
 export interface DaySchedule {
   open: string;
   close: string;
@@ -54,6 +63,7 @@ export interface AppSettings {
   pixName: string;
   deliveryFee: number;
   promotion?: Promotion;
+  featuredItem?: FeaturedItem;
   businessHours?: BusinessHours;
 }
 

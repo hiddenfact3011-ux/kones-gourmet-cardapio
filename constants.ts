@@ -18,6 +18,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
     price: 0,
     image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400'
   },
+  featuredItem: {
+    active: true,
+    productId: '',
+    title: 'Destaque do Dia 🌟',
+    description: 'O sabor que você merece hoje!',
+    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600',
+    price: 0
+  },
   businessHours: {
     seg: { open: '18:00', close: '23:00', closed: false },
     ter: { open: '18:00', close: '23:00', closed: false },
