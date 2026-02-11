@@ -18,7 +18,6 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
     try {
       let dataToSave = data;
       
-      // Sanitização básica para evitar erros de JSON no Supabase
       if (table === 'products') {
         dataToSave = data.map((p: any) => ({
           id: p.id,
@@ -39,7 +38,6 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
 
       let error;
       if (table === 'settings') {
-        // Para configurações, sempre usamos o ID 1
         const { error: upsertError } = await supabase.from('settings').upsert({ id: 1, data: dataToSave });
         error = upsertError;
       } else {
@@ -48,13 +46,14 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
       }
 
       if (error) throw error;
-      alert("✅ Silvia, tudo salvo no banco de dados!");
+      alert("✅ Silvia, tudo salvo com sucesso!");
     } catch (e: any) {
       console.error("Erro completo:", e);
-      if (e.message === 'Failed to fetch') {
-        alert("❌ Erro de Conexão (Failed to Fetch):\n\nIsso geralmente acontece se:\n1. O Supabase está fora do ar ou o projeto foi pausado.\n2. Você tem um AdBlocker ligado que bloqueia o banco de dados.\n3. As tabelas ainda não foram criadas no painel do Supabase.");
+      // Silvia, se o projeto estiver pausado, o erro cai aqui:
+      if (e.message === 'Failed to fetch' || (e.status === 0)) {
+        alert("⚠️ PROJETO PAUSADO NO SUPABASE\n\nSilvia, seu banco de dados entrou em repouso. Siga estes passos:\n\n1. Entre em app.supabase.com\n2. Clique no projeto 'Kones Gourmet'\n3. Clique em 'Restore Project'\n4. Espere 1 minuto e tente salvar aqui novamente.");
       } else {
-        alert(`❌ Erro ao salvar: ${e.message || 'Erro desconhecido'}`);
+        alert(`❌ Erro ao salvar: ${e.message || 'Erro de conexão'}`);
       }
     }
     setLoading(false);
