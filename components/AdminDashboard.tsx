@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, ArrowLeft, Settings, Tag, Store, Camera, Save, BarChart3, Star, CheckCircle2, X, TrendingUp, Link, Copy, Package, LayoutDashboard, UtensilsCrossed, Clock, Sparkles } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Settings, Tag, Store, Camera, Save, BarChart3, Star, CheckCircle2, X, TrendingUp, Link, Copy, Package, LayoutDashboard, UtensilsCrossed, Clock, Sparkles, Image as ImageIcon, Wand2, Paintbrush } from 'lucide-react';
 import { AppSettings, Category, Product, DaySchedule } from '../types';
 import { ADMIN_PASSWORD } from '../constants';
 import { supabase } from '../lib/supabase';
@@ -141,6 +141,37 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
               </div>
               <div className="hidden md:block bg-white/10 p-4 rounded-3xl backdrop-blur-md"><Link size={48} className="opacity-50"/></div>
             </div>
+
+            {/* FERRAMENTAS PARA SILVIA */}
+            <div className="bg-white p-6 rounded-[32px] border shadow-sm">
+               <h3 className="font-black text-gray-900 uppercase text-xs mb-6 flex items-center gap-2">
+                 <Wand2 size={16} className="text-red-600"/> Ferramentas para Silvia
+               </h3>
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                 <a href="https://tinypng.com" target="_blank" rel="noreferrer" className="flex items-center gap-4 p-4 rounded-2xl bg-blue-50 border border-blue-100 hover:bg-blue-100 transition group">
+                    <div className="bg-blue-500 p-3 rounded-xl text-white shadow-md group-hover:scale-110 transition"><ImageIcon size={20}/></div>
+                    <div>
+                      <p className="font-black text-[10px] text-blue-600 uppercase">Diminuir Fotos</p>
+                      <p className="text-[9px] font-bold text-blue-400">TinyPNG.com</p>
+                    </div>
+                 </a>
+                 <a href="https://www.remove.bg/pt-br" target="_blank" rel="noreferrer" className="flex items-center gap-4 p-4 rounded-2xl bg-purple-50 border border-purple-100 hover:bg-purple-100 transition group">
+                    <div className="bg-purple-500 p-3 rounded-xl text-white shadow-md group-hover:scale-110 transition"><Paintbrush size={20}/></div>
+                    <div>
+                      <p className="font-black text-[10px] text-purple-600 uppercase">Tirar o Fundo</p>
+                      <p className="text-[9px] font-bold text-purple-400">Remove.bg</p>
+                    </div>
+                 </a>
+                 <a href="https://www.canva.com" target="_blank" rel="noreferrer" className="flex items-center gap-4 p-4 rounded-2xl bg-teal-50 border border-teal-100 hover:bg-teal-100 transition group">
+                    <div className="bg-teal-500 p-3 rounded-xl text-white shadow-md group-hover:scale-110 transition"><LayoutDashboard size={20}/></div>
+                    <div>
+                      <p className="font-black text-[10px] text-teal-600 uppercase">Criar Banners</p>
+                      <p className="text-[9px] font-bold text-teal-400">Canva.com</p>
+                    </div>
+                 </a>
+               </div>
+               <p className="mt-6 text-center text-[9px] font-black text-gray-300 uppercase tracking-widest">💡 Dica: Use o TinyPNG em todas as fotos antes de subir no site!</p>
+            </div>
           </div>
         )}
 
@@ -256,7 +287,6 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                  </div>
                </div>
 
-               {/* NOVO: EDITOR DO DESTAQUE DO DIA */}
                <div className="bg-amber-50 p-6 rounded-3xl border border-amber-100 space-y-6">
                  <div className="flex justify-between items-center">
                    <h4 className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-2"><Sparkles size={16}/> Configurar Destaque do Dia</h4>
