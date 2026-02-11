@@ -35,7 +35,30 @@ const App: React.FC = () => {
     load();
   }, []);
 
-  // CÁLCULO TOTAL: (Preço Base + Soma dos Adicionais) * Quantidade
+  const isStoreOpen = () => {
+    if (!settings.businessHours) return true;
+    const now = new Date();
+    const days = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'] as const;
+    const today = days[now.getDay()];
+    const schedule = settings.businessHours[today];
+
+    if (!schedule || schedule.closed) return false;
+
+    const [openH, openM] = schedule.open.split(':').map(Number);
+    const [closeH, closeM] = schedule.close.split(':').map(Number);
+    
+    const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+    const openTimeMinutes = openH * 60 + openM;
+    let closeTimeMinutes = closeH * 60 + closeM;
+
+    // Caso o horário de fechamento seja após a meia-noite (ex: até 02:00)
+    if (closeTimeMinutes < openTimeMinutes) {
+      return currentTimeMinutes >= openTimeMinutes || currentTimeMinutes <= closeTimeMinutes;
+    }
+
+    return currentTimeMinutes >= openTimeMinutes && currentTimeMinutes <= closeTimeMinutes;
+  };
+
   const total = cart.reduce((acc, item) => {
     const isPromo = item.productId === 'promo-item';
     const p = isPromo ? { price: settings.promotion?.price || 0, extras: [] as any[] } : products.find(prod => prod.id === item.productId);
@@ -83,9 +106,10 @@ const App: React.FC = () => {
 
   if (view === 'admin') return <AdminDashboard settings={settings} setSettings={setSettings} categories={categories} setCategories={setCategories} products={products} setProducts={setProducts} onClose={() => setView('menu')} isAdminLoggedIn={isAdminLoggedIn} setIsAdminLoggedIn={setIsAdminLoggedIn} />;
 
+  const isOpen = isStoreOpen();
+
   return (
     <div className="min-h-screen bg-white pb-32 font-['Inter']">
-      {/* HEADER ESTILO IFOOD */}
       <div className="relative h-44 md:h-56">
         <img src={settings.banner} className="w-full h-full object-cover" alt="Banner" />
         <div className="absolute inset-0 bg-black/30" />
@@ -101,15 +125,21 @@ const App: React.FC = () => {
             <div className="flex items-center gap-3 mt-1.5">
               <span className="flex items-center gap-1 text-xs font-bold text-amber-500"><Star size={14} className="fill-amber-500"/> 4.9</span>
               <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs font-bold text-green-600">Aberto</span>
+              <span className={`text-xs font-bold ${isOpen ? 'text-green-600' : 'text-red-600'}`}>
+                {isOpen ? 'Aberto' : 'Fechado'}
+              </span>
             </div>
             <p className="text-[10px] text-gray-400 mt-1 uppercase font-black tracking-wider">30-45 min • R$ {settings.deliveryFee.toFixed(2)}</p>
           </div>
         </div>
       </div>
 
-      {/* BUSCA */}
       <div className="px-5 mt-6">
+        {!isOpen && (
+          <div className="bg-red-50 text-red-700 p-3 rounded-xl mb-4 text-xs font-bold flex items-center gap-2 border border-red-100">
+            <Clock size={16}/> Estamos fora do horário de atendimento agora.
+          </div>
+        )}
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input 
@@ -121,7 +151,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* CATEGORIAS STICKY */}
       <div className="sticky top-0 z-40 bg-white border-b mt-6 overflow-x-auto hide-scrollbar shadow-sm">
         <div className="px-5 flex gap-6 py-4">
           <button onClick={() => setSelectedCategory('all')} className={`text-sm font-bold whitespace-nowrap pb-1 ${selectedCategory === 'all' ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-500'}`}>Destaques</button>
@@ -131,7 +160,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* PROMOÇÃO DO DIA */}
       {settings.promotion?.active && selectedCategory === 'all' && (
         <div className="px-5 mt-6">
           <div onClick={() => { setSelectedProduct({ id: 'promo-item', ...settings.promotion } as any); setSelectedExtras([]); setNotes(''); }} className="bg-red-50 rounded-2xl p-4 flex gap-4 border border-red-100 cursor-pointer hover:bg-red-100/50 transition group">
@@ -149,7 +177,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* LISTA DE PRODUTOS ESTILO IFOOD */}
       <div className="px-5 mt-8 space-y-10">
         {categories.filter(c => selectedCategory === 'all' || c.id === selectedCategory).map(cat => (
           <div key={cat.id} className="space-y-4">
@@ -173,7 +200,6 @@ const App: React.FC = () => {
         ))}
       </div>
 
-      {/* BOTÃO FLUTUANTE CARRINHO */}
       {cart.length > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg z-50">
           <button onClick={() => setIsCartOpen(true)} className="w-full bg-red-600 text-white font-black py-4 rounded-xl flex justify-between items-center px-6 shadow-2xl active:scale-95 transition">
@@ -186,7 +212,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL PRODUTO */}
       {selectedProduct && (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-end justify-center">
           <div className="bg-white w-full max-w-xl rounded-t-[32px] max-h-[92vh] flex flex-col overflow-hidden animate-slide-in">
@@ -236,7 +261,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* CARRINHO / CHECKOUT */}
       {isCartOpen && (
         <div className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex items-end justify-center">
           <div className="bg-white w-full max-w-xl rounded-t-[32px] max-h-[95vh] flex flex-col animate-slide-in">
@@ -246,7 +270,6 @@ const App: React.FC = () => {
             </div>
             
             <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-              {/* ITENS NO CARRINHO */}
               <div className="space-y-6">
                 {cart.map((item, idx) => {
                   const p = item.productId === 'promo-item' ? { name: settings.promotion?.name, price: settings.promotion?.price, extras: [] as any[] } : products.find(prod => prod.id === item.productId);
@@ -268,7 +291,6 @@ const App: React.FC = () => {
                 })}
               </div>
 
-              {/* DADOS DE ENTREGA */}
               <div className="space-y-4 bg-gray-50 p-6 rounded-3xl border border-gray-100">
                 <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><MapPin size={14}/> Dados de Entrega</h3>
                 <input placeholder="Nome Completo" className="w-full p-4 rounded-xl border-2 border-transparent focus:border-red-600 bg-white shadow-sm outline-none font-bold text-sm" value={customerInfo.name} onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})} />
@@ -285,7 +307,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* RESUMO VALORES */}
               <div className="space-y-2 pt-4 border-t">
                 <div className="flex justify-between text-gray-500 font-bold text-sm"><span>Subtotal</span><span>R$ {total.toFixed(2)}</span></div>
                 <div className="flex justify-between text-gray-500 font-bold text-sm"><span>Taxa de Entrega</span><span>R$ {settings.deliveryFee.toFixed(2)}</span></div>

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, ArrowLeft, Settings, Tag, Store, Camera, Save, BarChart3, Star, CheckCircle2, X, TrendingUp, Link, Copy, Package, LayoutDashboard, UtensilsCrossed } from 'lucide-react';
-import { AppSettings, Category, Product } from '../types';
+import { Plus, Trash2, ArrowLeft, Settings, Tag, Store, Camera, Save, BarChart3, Star, CheckCircle2, X, TrendingUp, Link, Copy, Package, LayoutDashboard, UtensilsCrossed, Clock } from 'lucide-react';
+import { AppSettings, Category, Product, DaySchedule } from '../types';
 import { ADMIN_PASSWORD } from '../constants';
 import { supabase } from '../lib/supabase';
 
@@ -9,7 +9,7 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
   const [pass, setPass] = useState('');
   const [tab, setTab] = useState('overview');
   const [loading, setLoading] = useState(false);
-  const OFFICIAL_URL = window.location.origin;
+  const OFFICIAL_URL = 'https://kones-gourmet-cardapio.vercel.app/';
 
   const generateId = () => Math.floor(Math.random() * 1000000).toString();
 
@@ -47,6 +47,12 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
     }
   };
 
+  const updateBusinessHours = (day: string, field: keyof DaySchedule, value: any) => {
+    const hours = { ...(settings.businessHours || {}) };
+    hours[day] = { ...hours[day], [field]: value };
+    setSettings({ ...settings, businessHours: hours });
+  };
+
   if (!isAdminLoggedIn) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
       <div className="bg-white p-10 rounded-3xl w-full max-w-sm text-center shadow-2xl border border-gray-100">
@@ -60,9 +66,13 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
     </div>
   );
 
+  const daysLabels: Record<string, string> = {
+    seg: 'Segunda-feira', ter: 'Terça-feira', qua: 'Quarta-feira', qui: 'Quinta-feira', 
+    sex: 'Sexta-feira', sab: 'Sábado', dom: 'Domingo'
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-['Inter']">
-      {/* SIDEBAR / HEADER */}
       <header className="bg-white border-b p-4 sticky top-0 z-50 flex justify-between items-center shadow-sm">
         <div className="flex items-center gap-4">
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition"><ArrowLeft size={20}/></button>
@@ -146,7 +156,6 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                     </div>
                   </div>
 
-                  {/* ADICIONAIS */}
                   <div className="bg-zinc-50 p-5 rounded-2xl border">
                     <div className="flex justify-between items-center mb-4">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Adicionais</p>
@@ -229,6 +238,47 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                  <h4 className="text-[10px] font-black text-red-600 uppercase tracking-widest">Configurações Financeiras (PIX)</h4>
                  <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" value={settings.pixKey} onChange={e => setSettings({...settings, pixKey: e.target.value})} placeholder="Chave PIX" />
                  <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" value={settings.pixName} onChange={e => setSettings({...settings, pixName: e.target.value})} placeholder="Nome do Titular" />
+               </div>
+
+               {/* HORÁRIOS DE FUNCIONAMENTO */}
+               <div className="pt-6 space-y-4">
+                  <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2"><Clock size={16}/> Horários de Funcionamento</h4>
+                  <div className="grid gap-3">
+                    {Object.keys(daysLabels).map((day) => {
+                      const dayData = settings.businessHours?.[day] || { open: '18:00', close: '23:00', closed: false };
+                      return (
+                        <div key={day} className="flex flex-col md:flex-row md:items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                          <span className="w-32 font-bold text-sm text-gray-700">{daysLabels[day]}</span>
+                          <div className="flex flex-1 items-center gap-2">
+                            <input 
+                              type="time" 
+                              disabled={dayData.closed}
+                              className="bg-white p-2 rounded-lg border text-sm outline-none focus:border-red-600 disabled:opacity-50" 
+                              value={dayData.open} 
+                              onChange={(e) => updateBusinessHours(day, 'open', e.target.value)}
+                            />
+                            <span className="text-gray-400">até</span>
+                            <input 
+                              type="time" 
+                              disabled={dayData.closed}
+                              className="bg-white p-2 rounded-lg border text-sm outline-none focus:border-red-600 disabled:opacity-50" 
+                              value={dayData.close} 
+                              onChange={(e) => updateBusinessHours(day, 'close', e.target.value)}
+                            />
+                          </div>
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={dayData.closed} 
+                              onChange={(e) => updateBusinessHours(day, 'closed', e.target.checked)}
+                              className="w-4 h-4 accent-red-600"
+                            />
+                            <span className="text-[10px] font-black uppercase text-gray-400">Fechado</span>
+                          </label>
+                        </div>
+                      )
+                    })}
+                  </div>
                </div>
             </div>
 

@@ -29,6 +29,22 @@ export interface Promotion {
   image: string;
 }
 
+export interface DaySchedule {
+  open: string;
+  close: string;
+  closed: boolean;
+}
+
+export interface BusinessHours {
+  seg: DaySchedule;
+  ter: DaySchedule;
+  qua: DaySchedule;
+  qui: DaySchedule;
+  sex: DaySchedule;
+  sab: DaySchedule;
+  dom: DaySchedule;
+}
+
 export interface AppSettings {
   storeName: string;
   logo: string;
@@ -38,6 +54,7 @@ export interface AppSettings {
   pixName: string;
   deliveryFee: number;
   promotion?: Promotion;
+  businessHours?: BusinessHours;
 }
 
 export interface CartItem {
