@@ -24,11 +24,45 @@ const App: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const { data: s } = await supabase.from('settings').select('*').eq('id', 1).single();
-        if (s?.data) setSettings(s.data);
-        const { data: c } = await supabase.from('categories').select('*').order('name');
-        if (c?.length) setCategories(c);
-        const { data: p } = await supabase.from('products').select('*').order('name');
+        const { data: s } = await supabase.from('settings').select('*').eq('id', 1).single() as { data: { data: AppSettings } | null };
+        const { data: c } = await supabase.from('categories').select('*') as { data: Category[] | null };
+        const { data: p } = await supabase.from('products').select('*') as { data: Product[] | null };
+        
+        let loadedSettings = DEFAULT_SETTINGS;
+        if (s?.data) {
+          loadedSettings = s.data;
+          setSettings(loadedSettings);
+        }
+        
+        if (c?.length) {
+          const uniqueCats = Array.from(new Map(c.map((item: Category) => [item.id, item])).values());
+          
+          let sorted = [...uniqueCats];
+          
+          // Ordem preferida da Silvia
+          const silviaOrder = ["Pizzas no cone", "Pizzas tradicionais", "caribó", "macarrão", "Batata frita", "omelete", "Peixe", "bebidas"];
+          
+          const orderToUse = loadedSettings.categoryOrder || [];
+
+          sorted.sort((a, b) => {
+            // Se houver uma ordem salva no banco, usa ela
+            if (orderToUse.length > 0) {
+              const idxA = orderToUse.indexOf(a.id);
+              const idxB = orderToUse.indexOf(b.id);
+              return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+            }
+            // Se não, tenta a ordem nominal da Silvia
+            const nameA = a.name.toLowerCase();
+            const nameB = b.name.toLowerCase();
+            const sIdxA = silviaOrder.findIndex(name => nameA.includes(name.toLowerCase()));
+            const sIdxB = silviaOrder.findIndex(name => nameB.includes(name.toLowerCase()));
+            
+            return (sIdxA === -1 ? 999 : sIdxA) - (sIdxB === -1 ? 999 : sIdxB);
+          });
+          
+          setCategories(sorted);
+        }
+        
         if (p?.length) setProducts(p);
       } catch (err) { console.warn("Modo Offline"); }
     };
@@ -160,7 +194,6 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* NOVO: DESTAQUE DO DIA SILVIA */}
       {settings.featuredItem?.active && (
         <div className="px-5 mt-6">
           <div 
@@ -196,7 +229,7 @@ const App: React.FC = () => {
 
       <div className="sticky top-0 z-40 bg-white border-b mt-6 overflow-x-auto hide-scrollbar shadow-sm">
         <div className="px-5 flex gap-6 py-4">
-          <button onClick={() => setSelectedCategory('all')} className={`text-sm font-bold whitespace-nowrap pb-1 ${selectedCategory === 'all' ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-500'}`}>Destaques</button>
+          <button onClick={() => setSelectedCategory('all')} className={`text-sm font-bold whitespace-nowrap pb-1 ${selectedCategory === 'all' ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-500'}`}>Tudo</button>
           {categories.map(c => (
             <button key={c.id} onClick={() => setSelectedCategory(c.id)} className={`text-sm font-bold whitespace-nowrap pb-1 capitalize ${selectedCategory === c.id ? 'text-red-600 border-b-2 border-red-600' : 'text-gray-500'}`}>{c.name}</button>
           ))}
@@ -204,26 +237,31 @@ const App: React.FC = () => {
       </div>
 
       <div className="px-5 mt-8 space-y-10">
-        {categories.filter(c => selectedCategory === 'all' || c.id === selectedCategory).map(cat => (
-          <div key={cat.id} className="space-y-4">
-            <h3 className="font-black text-lg text-gray-900">{cat.name}</h3>
-            <div className="grid gap-6">
-              {products.filter(p => p.categoryId === cat.id && p.active && p.name.toLowerCase().includes(searchQuery.toLowerCase())).map(p => (
-                <div key={p.id} onClick={() => { setSelectedProduct(p); setSelectedExtras([]); setNotes(''); }} className="flex justify-between gap-4 group cursor-pointer border-b border-gray-100 pb-6 last:border-0">
-                  <div className="flex-1 space-y-1">
-                    <h4 className="font-bold text-gray-800 text-base">{p.name}</h4>
-                    <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">{p.description}</p>
-                    <p className="text-base font-bold text-gray-900 pt-1">R$ {p.price.toFixed(2)}</p>
+        {categories.filter(c => selectedCategory === 'all' || c.id === selectedCategory).map(cat => {
+          const catProducts = products.filter(p => p.categoryId === cat.id && p.active && p.name.toLowerCase().includes(searchQuery.toLowerCase()));
+          if (catProducts.length === 0) return null;
+          
+          return (
+            <div key={cat.id} className="space-y-4">
+              <h3 className="font-black text-lg text-gray-900">{cat.name}</h3>
+              <div className="grid gap-6">
+                {catProducts.map(p => (
+                  <div key={p.id} onClick={() => { setSelectedProduct(p); setSelectedExtras([]); setNotes(''); }} className="flex justify-between gap-4 group cursor-pointer border-b border-gray-100 pb-6 last:border-0">
+                    <div className="flex-1 space-y-1">
+                      <h4 className="font-bold text-gray-800 text-base">{p.name}</h4>
+                      <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">{p.description}</p>
+                      <p className="text-base font-bold text-gray-900 pt-1">R$ {p.price.toFixed(2)}</p>
+                    </div>
+                    <div className="relative">
+                      <img src={p.image} className="w-28 h-28 rounded-xl object-cover shadow-sm group-hover:scale-105 transition duration-300" />
+                      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white px-4 py-1.5 rounded-lg shadow-md border border-gray-100 text-[10px] font-black text-red-600 uppercase">Adicionar</div>
+                    </div>
                   </div>
-                  <div className="relative">
-                    <img src={p.image} className="w-28 h-28 rounded-xl object-cover shadow-sm group-hover:scale-105 transition duration-300" />
-                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-white px-4 py-1.5 rounded-lg shadow-md border border-gray-100 text-[10px] font-black text-red-600 uppercase">Adicionar</div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {cart.length > 0 && (

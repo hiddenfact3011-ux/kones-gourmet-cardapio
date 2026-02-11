@@ -65,6 +65,7 @@ export interface AppSettings {
   promotion?: Promotion;
   featuredItem?: FeaturedItem;
   businessHours?: BusinessHours;
+  categoryOrder?: string[];
 }
 
 export interface CartItem {

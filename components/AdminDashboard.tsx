@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Plus, Trash2, ArrowLeft, Settings, Tag, Store, Camera, Save, BarChart3, Star, CheckCircle2, X, TrendingUp, Link, Copy, Package, LayoutDashboard, UtensilsCrossed, Clock, Sparkles, Image as ImageIcon, Wand2, Paintbrush, Zap } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, Settings, Tag, Store, Camera, Save, BarChart3, Star, CheckCircle2, X, TrendingUp, Link, Copy, Package, LayoutDashboard, UtensilsCrossed, Clock, Sparkles, Image as ImageIcon, Wand2, Paintbrush, Zap, ChevronUp, ChevronDown } from 'lucide-react';
 import { AppSettings, Category, Product, DaySchedule } from '../types';
 import { ADMIN_PASSWORD } from '../constants';
 import { supabase } from '../lib/supabase';
@@ -13,13 +13,26 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
 
   const generateId = () => Math.floor(Math.random() * 1000000).toString();
 
+  const moveCategory = (index: number, direction: 'up' | 'down') => {
+    const newCategories = [...categories];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newCategories.length) return;
+    
+    [newCategories[index], newCategories[targetIndex]] = [newCategories[targetIndex], newCategories[index]];
+    setCategories(newCategories);
+    
+    // Atualizar a ordem localmente
+    const newOrder = newCategories.map(c => c.id);
+    setSettings({ ...settings, categoryOrder: newOrder });
+  };
+
   const save = async (table: string, data: any) => {
     setLoading(true);
     try {
       let dataToSave = data;
       
       if (table === 'products') {
-        dataToSave = data.map((p: any) => ({
+        dataToSave = products.map((p: any) => ({
           id: p.id,
           name: p.name || 'Sem nome',
           description: p.description || '',
@@ -30,7 +43,7 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
           active: p.active !== false
         }));
       } else if (table === 'categories') {
-        dataToSave = data.map((c: any) => ({
+        dataToSave = categories.map((c: any) => ({
           id: c.id,
           name: c.name || 'Nova Categoria'
         }));
@@ -38,8 +51,18 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
 
       let error;
       if (table === 'settings') {
-        const { error: upsertError } = await supabase.from('settings').upsert({ id: 1, data: dataToSave });
+        const { error: upsertError } = await supabase.from('settings').upsert({ id: 1, data: settings });
         error = upsertError;
+      } else if (table === 'categories') {
+        // Salva as categorias
+        const { error: upsertError } = await supabase.from('categories').upsert(dataToSave, { onConflict: 'id' });
+        error = upsertError;
+        
+        // E salva a ordem no objeto settings
+        const currentOrder = categories.map((cat: any) => cat.id);
+        const newSettings = { ...settings, categoryOrder: currentOrder };
+        setSettings(newSettings);
+        await supabase.from('settings').upsert({ id: 1, data: newSettings });
       } else {
         const { error: upsertError } = await supabase.from(table).upsert(dataToSave, { onConflict: 'id' });
         error = upsertError;
@@ -49,11 +72,34 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
       alert("✅ Silvia, tudo salvo com sucesso!");
     } catch (e: any) {
       console.error("Erro completo:", e);
-      if (e.message === 'Failed to fetch' || (e.status === 0)) {
-        alert("⚠️ PROJETO PAUSADO NO SUPABASE\n\nSilvia, seu banco de dados entrou em repouso. Siga estes passos:\n\n1. Entre em app.supabase.com\n2. Clique no projeto 'Kones Gourmet'\n3. Clique em 'Restore Project'\n4. Espere 1 minuto e tente salvar aqui novamente.");
-      } else {
-        alert(`❌ Erro ao salvar: ${e.message || 'Erro de conexão'}`);
+      alert(`❌ Erro ao salvar: ${e.message || 'Erro de conexão'}`);
+    }
+    setLoading(false);
+  };
+
+  const deleteItem = async (table: string, id: string) => {
+    if (!confirm("Silvia, tem certeza que quer apagar esse item para sempre?")) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase.from(table).delete().eq('id', id);
+      if (error) throw error;
+
+      if (table === 'products') {
+        setProducts(products.filter((p: any) => p.id !== id));
+      } else if (table === 'categories') {
+        setCategories(categories.filter((c: any) => c.id !== id));
+        // Remove da ordem também
+        const newOrder = (settings.categoryOrder || []).filter((oid: string) => oid !== id);
+        const newSettings = { ...settings, categoryOrder: newOrder };
+        setSettings(newSettings);
+        await supabase.from('settings').upsert({ id: 1, data: newSettings });
       }
+      
+      alert("🗑️ Item removido com sucesso!");
+    } catch (e: any) {
+      console.error(e);
+      alert("Erro ao excluir: " + e.message);
     }
     setLoading(false);
   };
@@ -142,7 +188,6 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
               <div className="hidden md:block bg-white/10 p-4 rounded-3xl backdrop-blur-md"><Link size={48} className="opacity-50"/></div>
             </div>
 
-            {/* FERRAMENTAS PARA SILVIA ATUALIZADO */}
             <div className="bg-white p-6 rounded-[32px] border shadow-sm">
                <h3 className="font-black text-gray-900 uppercase text-xs mb-6 flex items-center gap-2">
                  <Wand2 size={16} className="text-red-600"/> Ferramentas para Silvia
@@ -237,30 +282,41 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                   <div className="flex justify-between items-center">
                     <div className="flex gap-2">
                       <button onClick={() => { const np = [...products]; np[i].active = !np[i].active; setProducts(np); }} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase transition ${p.active ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-gray-100 text-gray-400 border border-gray-200'}`}>{p.active ? 'Ativo' : 'Pausado'}</button>
-                      <button onClick={() => { if(confirm("Deseja remover este item?")) setProducts(products.filter((x:any)=>x.id!==p.id)) }} className="px-4 py-1.5 rounded-full text-[9px] font-black uppercase text-gray-300 hover:text-red-600 transition">Remover</button>
+                      <button onClick={() => deleteItem('products', p.id)} className="px-4 py-1.5 rounded-full text-[9px] font-black uppercase text-gray-300 hover:text-red-600 transition">Remover</button>
                     </div>
-                    <button onClick={() => save('products', products)} disabled={loading} className="bg-gray-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-md active:scale-95 transition">Salvar Item</button>
+                    <button onClick={() => save('products', products)} disabled={loading} className="bg-gray-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-md active:scale-95 transition">{loading ? '...' : 'Salvar Alterações'}</button>
                   </div>
                 </div>
               ))}
             </div>
-            <button onClick={() => save('products', products)} disabled={loading} className="w-full bg-red-600 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest mt-4 disabled:opacity-50">Salvar Todos os Itens</button>
+            <button onClick={() => save('products', products)} disabled={loading} className="w-full bg-red-600 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest mt-4 disabled:opacity-50">{loading ? 'Salvando...' : 'Salvar Todos os Itens'}</button>
           </div>
         )}
 
         {tab === 'categories' && (
           <div className="space-y-6 animate-slide-in">
-            <button onClick={() => setCategories([{ id: generateId(), name: 'Nova Categoria' }, ...categories])} className="bg-red-600 text-white px-8 py-4 rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition flex items-center gap-2"><Plus size={16}/> Nova Categoria</button>
-            <div className="grid gap-3">
-              {categories.map((c: any, i: number) => (
-                <div key={c.id} className="bg-white p-5 rounded-2xl border shadow-sm flex items-center gap-4">
-                  <UtensilsCrossed className="text-red-600" size={18}/>
-                  <input className="flex-1 font-bold text-gray-800 outline-none" value={c.name} onChange={e => { const nc = [...categories]; nc[i].name = e.target.value; setCategories(nc); }} />
-                  <button onClick={() => { if(confirm("Deseja excluir esta categoria?")) setCategories(categories.filter((x:any)=>x.id!==c.id)) }} className="p-2 text-gray-300 hover:text-red-600 transition"><Trash2 size={18}/></button>
-                </div>
-              ))}
+            <div className="bg-white p-6 rounded-[32px] border shadow-sm space-y-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="font-black text-gray-900 uppercase text-xs">Suas Categorias</h3>
+                <button onClick={() => setCategories([{ id: generateId(), name: 'Nova Categoria' }, ...categories])} className="bg-red-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg active:scale-95 transition flex items-center gap-2"><Plus size={16}/> Adicionar</button>
+              </div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase italic">💡 Silvia, use as setas para colocar na ordem certa!</p>
+              
+              <div className="grid gap-3 mt-4">
+                {categories.map((c: any, i: number) => (
+                  <div key={c.id} className="bg-gray-50 p-4 rounded-2xl border flex items-center gap-4 group">
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => moveCategory(i, 'up')} disabled={i === 0} className="p-1.5 hover:bg-white rounded-lg text-gray-400 hover:text-red-600 disabled:opacity-20 transition shadow-sm"><ChevronUp size={16}/></button>
+                      <button onClick={() => moveCategory(i, 'down')} disabled={i === categories.length - 1} className="p-1.5 hover:bg-white rounded-lg text-gray-400 hover:text-red-600 disabled:opacity-20 transition shadow-sm"><ChevronDown size={16}/></button>
+                    </div>
+                    <UtensilsCrossed className="text-red-600 shrink-0" size={18}/>
+                    <input className="flex-1 font-bold text-gray-800 outline-none bg-transparent" value={c.name} onChange={e => { const nc = [...categories]; nc[i].name = e.target.value; setCategories(nc); }} />
+                    <button onClick={() => deleteItem('categories', c.id)} className="p-2 text-gray-300 hover:text-red-600 transition"><Trash2 size={18}/></button>
+                  </div>
+                ))}
+              </div>
             </div>
-            <button onClick={() => save('categories', categories)} disabled={loading} className="w-full bg-gray-900 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest mt-4">Salvar Categorias</button>
+            <button onClick={() => save('categories', categories)} disabled={loading} className="w-full bg-gray-900 text-white py-4 rounded-xl font-black uppercase text-[10px] tracking-widest mt-4">{loading ? 'Salvando...' : 'Salvar Ordem e Categorias'}</button>
           </div>
         )}
 
@@ -387,7 +443,7 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                </div>
             </div>
 
-            <button onClick={() => save('settings', settings)} disabled={loading} className="w-full bg-red-600 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl hover:bg-red-700 transition">Salvar Configurações</button>
+            <button onClick={() => save('settings', settings)} disabled={loading} className="w-full bg-red-600 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] shadow-xl hover:bg-red-700 transition">{loading ? 'Salvando...' : 'Salvar Configurações'}</button>
           </div>
         )}
       </main>
