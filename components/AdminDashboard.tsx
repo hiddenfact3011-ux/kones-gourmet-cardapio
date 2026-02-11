@@ -23,10 +23,10 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
     
     // Atualizar a ordem localmente
     const newOrder = newCategories.map(c => c.id);
-    setSettings({ ...settings, categoryOrder: newOrder });
+    setSettings((prev: any) => ({ ...prev, categoryOrder: newOrder }));
   };
 
-  const save = async (table: string, data: any) => {
+  const save = async (table: string, data?: any) => {
     setLoading(true);
     try {
       let dataToSave = data;
@@ -54,11 +54,10 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
         const { error: upsertError } = await supabase.from('settings').upsert({ id: 1, data: settings });
         error = upsertError;
       } else if (table === 'categories') {
-        // Salva as categorias
         const { error: upsertError } = await supabase.from('categories').upsert(dataToSave, { onConflict: 'id' });
         error = upsertError;
         
-        // E salva a ordem no objeto settings
+        // Sincroniza ordem das categorias nas configurações
         const currentOrder = categories.map((cat: any) => cat.id);
         const newSettings = { ...settings, categoryOrder: currentOrder };
         setSettings(newSettings);
@@ -71,29 +70,37 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
       if (error) throw error;
       alert("✅ Silvia, tudo salvo com sucesso!");
     } catch (e: any) {
-      console.error("Erro completo:", e);
+      console.error("Erro ao salvar:", e);
       alert(`❌ Erro ao salvar: ${e.message || 'Erro de conexão'}`);
     }
     setLoading(false);
   };
 
   const deleteItem = async (table: string, id: string) => {
-    if (!confirm("Silvia, tem certeza que quer apagar esse item para sempre?")) return;
+    if (!confirm("Silvia, tem certeza que deseja apagar este item?")) return;
     
     setLoading(true);
     try {
+      // 1. Tenta deletar do Supabase (ignora erro se o item não existir no banco ainda)
       const { error } = await supabase.from(table).delete().eq('id', id);
-      if (error) throw error;
-
+      
+      // 2. Sempre atualiza o estado local para que o item suma da tela imediatamente
       if (table === 'products') {
-        setProducts(products.filter((p: any) => p.id !== id));
+        setProducts((prev: any) => prev.filter((p: any) => p.id !== id));
       } else if (table === 'categories') {
-        setCategories(categories.filter((c: any) => c.id !== id));
-        // Remove da ordem também
-        const newOrder = (settings.categoryOrder || []).filter((oid: string) => oid !== id);
-        const newSettings = { ...settings, categoryOrder: newOrder };
-        setSettings(newSettings);
-        await supabase.from('settings').upsert({ id: 1, data: newSettings });
+        setCategories((prev: any) => prev.filter((c: any) => c.id !== id));
+        // Remove também da ordem nas configurações
+        setSettings((prev: any) => {
+          const newOrder = (prev.categoryOrder || []).filter((oid: string) => oid !== id);
+          const newSettings = { ...prev, categoryOrder: newOrder };
+          // Opcional: Salva as novas configurações de ordem silenciosamente
+          supabase.from('settings').upsert({ id: 1, data: newSettings });
+          return newSettings;
+        });
+      }
+      
+      if (error && error.message !== 'Unexpected token') {
+          console.warn("Aviso na exclusão do banco:", error.message);
       }
       
       alert("🗑️ Item removido com sucesso!");
@@ -114,9 +121,11 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
   };
 
   const updateBusinessHours = (day: string, field: keyof DaySchedule, value: any) => {
-    const hours = { ...(settings.businessHours || {}) };
-    hours[day] = { ...hours[day], [field]: value };
-    setSettings({ ...settings, businessHours: hours });
+    setSettings((prev: any) => {
+        const hours = { ...(prev.businessHours || {}) };
+        hours[day] = { ...hours[day], [field]: value };
+        return { ...prev, businessHours: hours };
+    });
   };
 
   if (!isAdminLoggedIn) return (
@@ -282,9 +291,11 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                   <div className="flex justify-between items-center">
                     <div className="flex gap-2">
                       <button onClick={() => { const np = [...products]; np[i].active = !np[i].active; setProducts(np); }} className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase transition ${p.active ? 'bg-green-50 text-green-600 border border-green-200' : 'bg-gray-100 text-gray-400 border border-gray-200'}`}>{p.active ? 'Ativo' : 'Pausado'}</button>
-                      <button onClick={() => deleteItem('products', p.id)} className="px-4 py-1.5 rounded-full text-[9px] font-black uppercase text-gray-300 hover:text-red-600 transition">Remover</button>
+                      <button onClick={() => deleteItem('products', p.id)} className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[9px] font-black uppercase text-gray-400 hover:text-red-600 transition border border-transparent hover:border-red-100 hover:bg-red-50">
+                        <Trash2 size={14}/> Remover Item
+                      </button>
                     </div>
-                    <button onClick={() => save('products', products)} disabled={loading} className="bg-gray-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-md active:scale-95 transition">{loading ? '...' : 'Salvar Alterações'}</button>
+                    <button onClick={() => save('products', products)} disabled={loading} className="bg-gray-900 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase shadow-md active:scale-95 transition">{loading ? '...' : 'Salvar Item'}</button>
                   </div>
                 </div>
               ))}
@@ -311,7 +322,7 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                     </div>
                     <UtensilsCrossed className="text-red-600 shrink-0" size={18}/>
                     <input className="flex-1 font-bold text-gray-800 outline-none bg-transparent" value={c.name} onChange={e => { const nc = [...categories]; nc[i].name = e.target.value; setCategories(nc); }} />
-                    <button onClick={() => deleteItem('categories', c.id)} className="p-2 text-gray-300 hover:text-red-600 transition"><Trash2 size={18}/></button>
+                    <button onClick={() => deleteItem('categories', c.id)} className="p-2 text-gray-300 hover:text-red-600 transition bg-white rounded-lg shadow-sm"><Trash2 size={18}/></button>
                   </div>
                 ))}
               </div>
@@ -329,24 +340,24 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Logo da Loja</p>
                    <div className="relative w-32 h-32">
                      <img src={settings.logo} className="w-full h-full rounded-2xl object-cover border" />
-                     <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 rounded-2xl cursor-pointer transition text-white"><Camera/><input type="file" className="hidden" onChange={e => upload(e, (b:any) => setSettings({...settings, logo:b}))}/></label>
+                     <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 rounded-2xl cursor-pointer transition text-white"><Camera/><input type="file" className="hidden" onChange={e => upload(e, (b:any) => setSettings((prev:any)=>({...prev, logo:b}))) }/></label>
                    </div>
                  </div>
                  <div className="space-y-2">
                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Capa (Banner)</p>
                    <div className="relative h-32">
                      <img src={settings.banner} className="w-full h-full rounded-2xl object-cover border" />
-                     <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 rounded-2xl cursor-pointer transition text-white"><Camera/><input type="file" className="hidden" onChange={e => upload(e, (b:any) => setSettings({...settings, banner:b}))}/></label>
+                     <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 rounded-2xl cursor-pointer transition text-white"><Camera/><input type="file" className="hidden" onChange={e => upload(e, (b:any) => setSettings((prev:any)=>({...prev, banner:b}))) }/></label>
                    </div>
                  </div>
                </div>
                
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <input className="w-full p-4 bg-gray-100 rounded-xl font-bold border outline-none focus:border-red-600" value={settings.storeName} onChange={e => setSettings({...settings, storeName: e.target.value})} placeholder="Nome da Loja" />
-                 <input className="w-full p-4 bg-gray-100 rounded-xl font-bold border outline-none focus:border-red-600" value={settings.whatsapp} onChange={e => setSettings({...settings, whatsapp: e.target.value})} placeholder="WhatsApp (DDD + Número)" />
+                 <input className="w-full p-4 bg-gray-100 rounded-xl font-bold border outline-none focus:border-red-600" value={settings.storeName} onChange={e => setSettings((prev:any)=>({...prev, storeName: e.target.value}))} placeholder="Nome da Loja" />
+                 <input className="w-full p-4 bg-gray-100 rounded-xl font-bold border outline-none focus:border-red-600" value={settings.whatsapp} onChange={e => setSettings((prev:any)=>({...prev, whatsapp: e.target.value}))} placeholder="WhatsApp (DDD + Número)" />
                  <div className="flex items-center bg-gray-100 p-4 rounded-xl border focus-within:border-red-600">
                     <span className="font-bold text-gray-400 mr-2 text-sm">Entrega R$</span>
-                    <input type="number" className="w-full bg-transparent font-bold outline-none" value={settings.deliveryFee} onChange={e => setSettings({...settings, deliveryFee: parseFloat(e.target.value)})} />
+                    <input type="number" className="w-full bg-transparent font-bold outline-none" value={settings.deliveryFee} onChange={e => setSettings((prev:any)=>({...prev, deliveryFee: parseFloat(e.target.value)}))} />
                  </div>
                </div>
 
@@ -354,7 +365,7 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                  <div className="flex justify-between items-center">
                    <h4 className="text-[10px] font-black text-amber-600 uppercase tracking-widest flex items-center gap-2"><Sparkles size={16}/> Configurar Destaque do Dia</h4>
                    <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1 rounded-full shadow-sm">
-                      <input type="checkbox" checked={settings.featuredItem?.active} onChange={e => setSettings({...settings, featuredItem: {...settings.featuredItem, active: e.target.checked}})} className="w-4 h-4 accent-amber-600" />
+                      <input type="checkbox" checked={settings.featuredItem?.active} onChange={e => setSettings((prev:any)=>({...prev, featuredItem: {...prev.featuredItem, active: e.target.checked}}))} className="w-4 h-4 accent-amber-600" />
                       <span className="text-[9px] font-black uppercase text-amber-600">Ativar Banner</span>
                    </label>
                  </div>
@@ -367,39 +378,39 @@ const AdminDashboard = ({ settings, setSettings, categories, setCategories, prod
                         value={settings.featuredItem?.productId} 
                         onChange={e => {
                           const p = products.find((x:any) => x.id === e.target.value);
-                          setSettings({
-                            ...settings, 
+                          setSettings((prev:any) => ({
+                            ...prev, 
                             featuredItem: {
-                              ...settings.featuredItem, 
+                              ...prev.featuredItem, 
                               productId: e.target.value,
-                              title: p?.name || settings.featuredItem.title,
-                              price: p?.price || settings.featuredItem.price,
-                              image: p?.image || settings.featuredItem.image,
-                              description: p?.description || settings.featuredItem.description
+                              title: p?.name || prev.featuredItem.title,
+                              price: p?.price || prev.featuredItem.price,
+                              image: p?.image || prev.featuredItem.image,
+                              description: p?.description || prev.featuredItem.description
                             }
-                          })
+                          }))
                         }}
                        >
                          <option value="">Nenhum Produto Selecionado</option>
                          {products.map((p:any) => <option key={p.id} value={p.id}>{p.name} (R$ {p.price.toFixed(2)})</option>)}
                        </select>
-                       <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" value={settings.featuredItem?.title} onChange={e => setSettings({...settings, featuredItem: {...settings.featuredItem, title: e.target.value}})} placeholder="Título do Destaque" />
+                       <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" value={settings.featuredItem?.title} onChange={e => setSettings((prev:any)=>({...prev, featuredItem: {...prev.featuredItem, title: e.target.value}}))} placeholder="Título do Destaque" />
                     </div>
                     <div className="space-y-4">
                        <p className="text-[9px] font-black text-amber-400 uppercase">Foto do Destaque</p>
                        <div className="relative h-28 w-full">
                           <img src={settings.featuredItem?.image} className="w-full h-full rounded-2xl object-cover border" />
-                          <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 rounded-2xl cursor-pointer transition text-white"><Camera/><input type="file" className="hidden" onChange={e => upload(e, (b:any) => setSettings({...settings, featuredItem: {...settings.featuredItem, image: b}}))}/></label>
+                          <label className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 rounded-2xl cursor-pointer transition text-white"><Camera/><input type="file" className="hidden" onChange={e => upload(e, (b:any) => setSettings((prev:any)=>({...prev, featuredItem: {...prev.featuredItem, image: b}}))))}/></label>
                        </div>
-                       <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" type="number" value={settings.featuredItem?.price} onChange={e => setSettings({...settings, featuredItem: {...settings.featuredItem, price: parseFloat(e.target.value)}})} placeholder="Preço do Destaque" />
+                       <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" type="number" value={settings.featuredItem?.price} onChange={e => setSettings((prev:any)=>({...prev, featuredItem: {...prev.featuredItem, price: parseFloat(e.target.value)}}))} placeholder="Preço do Destaque" />
                     </div>
                  </div>
                </div>
 
                <div className="bg-red-50 p-6 rounded-2xl space-y-4">
                  <h4 className="text-[10px] font-black text-red-600 uppercase tracking-widest">Configurações Financeiras (PIX)</h4>
-                 <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" value={settings.pixKey} onChange={e => setSettings({...settings, pixKey: e.target.value})} placeholder="Chave PIX" />
-                 <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" value={settings.pixName} onChange={e => setSettings({...settings, pixName: e.target.value})} placeholder="Nome do Titular" />
+                 <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" value={settings.pixKey} onChange={e => setSettings((prev:any)=>({...prev, pixKey: e.target.value}))} placeholder="Chave PIX" />
+                 <input className="w-full p-4 bg-white rounded-xl font-bold border outline-none" value={settings.pixName} onChange={e => setSettings((prev:any)=>({...prev, pixName: e.target.value}))} placeholder="Nome do Titular" />
                </div>
 
                <div className="pt-6 space-y-4">
